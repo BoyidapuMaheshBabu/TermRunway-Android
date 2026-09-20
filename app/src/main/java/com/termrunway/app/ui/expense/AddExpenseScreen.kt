@@ -35,6 +35,7 @@ import com.termrunway.app.data.Expense
 import com.termrunway.app.data.ExpenseAmount
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
 import java.util.Locale
 
 private val categories = listOf(
@@ -68,7 +69,7 @@ fun AddExpenseScreen(
         SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     }
     val dateText = remember(selectedDateMillis) {
-        dateFormatter.format(selectedDateMillis)
+        dateFormatter.format(Date(selectedDateMillis))
     }
     val context = LocalContext.current
     val calendar = remember { Calendar.getInstance() }

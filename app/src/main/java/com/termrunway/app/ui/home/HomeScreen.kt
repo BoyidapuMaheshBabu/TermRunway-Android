@@ -34,6 +34,7 @@ fun HomeScreen(
 ) {
     val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
     val totalSpent = expenses.sumOf { it.amountCents }
+    val expenseLabel = if (expenses.size == 1) "expense" else "expenses"
 
     Scaffold(
         topBar = {
@@ -61,8 +62,7 @@ fun HomeScreen(
                     Text("₹" + ExpenseAmount.format(totalSpent))
                     Text(
                         expenses.size.toString() +
-                            " expense" +
-                            if (expenses.size == 1) "" else "s" +
+                            " " + expenseLabel +
                             " recorded"
                     )
                 }

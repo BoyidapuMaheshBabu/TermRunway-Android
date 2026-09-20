@@ -16,7 +16,9 @@ class ExpenseStorage(context: Context) {
             buildList {
                 for (index in 0 until json.length()) {
                     val item = json.optJSONObject(index) ?: continue
-                    val id = item.optString("id").ifBlank { continue }
+                    val id = item.optString("id")
+                    if (id.isBlank()) continue
+
                     val amountCents = item.optLong("amountCents", -1L)
                     val category = item.optString("category").trim()
                     val dateMillis = item.optLong("dateMillis", -1L)
