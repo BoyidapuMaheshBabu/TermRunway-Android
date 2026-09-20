@@ -9,11 +9,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.termrunway.app.data.ExpenseStorage
 import com.termrunway.app.ui.expense.AddExpenseScreen
+import com.termrunway.app.ui.history.HistoryScreen
 import com.termrunway.app.ui.home.HomeScreen
 
 private enum class AppScreen {
     HOME,
-    ADD_EXPENSE
+    ADD_EXPENSE,
+    HISTORY
 }
 
 @Composable
@@ -34,6 +36,9 @@ fun TermRunwayApp() {
                 onAddExpense = {
                     saveError = null
                     currentScreen = AppScreen.ADD_EXPENSE
+                },
+                onViewHistory = {
+                    currentScreen = AppScreen.HISTORY
                 }
             )
         }
@@ -60,6 +65,15 @@ fun TermRunwayApp() {
                     }
 
                     saved
+                }
+            )
+        }
+
+        AppScreen.HISTORY -> {
+            HistoryScreen(
+                expenses = expenses,
+                onBack = {
+                    currentScreen = AppScreen.HOME
                 }
             )
         }
