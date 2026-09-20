@@ -21,6 +21,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.termrunway.app.data.Expense
 import com.termrunway.app.data.ExpenseAmount
+import com.termrunway.app.data.Income
+import com.termrunway.app.logic.calculateFinancialSummary
 import com.termrunway.app.ui.components.ExpenseListItem
 import com.termrunway.app.ui.theme.TermRunwayTheme
 
@@ -28,7 +30,9 @@ import com.termrunway.app.ui.theme.TermRunwayTheme
 @Composable
 fun HomeScreen(
     expenses: List<Expense> = emptyList(),
+    incomes: List<Income> = emptyList(),
     onAddExpense: () -> Unit = {},
+    onAddIncome: () -> Unit = {},
     onViewHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -36,8 +40,8 @@ fun HomeScreen(
         .sortedByDescending { it.dateMillis }
         .take(10)
 
-    val totalSpent = expenses.sumOf { it.amountCents }
-    val expenseLabel = if (expenses.size == 1) "expense" else "expenses"
+    val summary = calculateFinancialSummary(incomes, expenses)
+    val balanceLabel = if (summary.availableBalanceCents < 0) "Balance" else "Available Balance"
 
     Scaffold(
         topBar = {
@@ -51,26 +55,35 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(bottom = 24.dp)
+            contentPadding = PaddingValues(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp)
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Total Spent")
-                        Text("₹" + ExpenseAmount.format(totalSpent))
-                        Text(
-                            expenses.size.toString() +
-                                " " + expenseLabel +
-                                " recorded"
-                        )
+                        Text(balanceLabel)
+                        Text("₹" + ExpenseAmount.format(summary.availableBalanceCents))
+                        Text("Income: ₹" + ExpenseAmount.format(summary.totalIncomeCents))
+                        Text("Expenses: ₹" + ExpenseAmount.format(summary.totalExpenseCents))
                     }
+                }
+            }
+
+            item {
+                Button(
+                    onClick = onAddIncome,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text("Add Income")
                 }
             }
 
@@ -90,7 +103,7 @@ fun HomeScreen(
                     text = "Recent Expenses",
                     modifier = Modifier.padding(
                         start = 16.dp,
-                        top = 24.dp,
+                        top = 16.dp,
                         bottom = 8.dp
                     )
                 )
