@@ -8,12 +8,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.termrunway.app.data.ExpenseStorage
+import com.termrunway.app.data.IncomeStorage
 import com.termrunway.app.ui.expense.AddExpenseScreen
 import com.termrunway.app.ui.history.HistoryScreen
 import com.termrunway.app.ui.home.HomeScreen
+import com.termrunway.app.ui.income.AddIncomeScreen
 
 private enum class AppScreen {
     HOME,
+    ADD_INCOME,
     ADD_EXPENSE,
     HISTORY
 }
@@ -21,24 +24,59 @@ private enum class AppScreen {
 @Composable
 fun TermRunwayApp() {
     val context = LocalContext.current
-    val storage = remember {
+    val expenseStorage = remember {
         ExpenseStorage(context.applicationContext)
+    }
+    val incomeStorage = remember {
+        IncomeStorage(context.applicationContext)
     }
 
     var currentScreen by rememberSaveable { mutableStateOf(AppScreen.HOME) }
-    var expenses by remember { mutableStateOf(storage.loadExpenses()) }
+    var expenses by remember { mutableStateOf(expenseStorage.loadExpenses()) }
+    var incomes by remember { mutableStateOf(incomeStorage.loadIncomes()) }
     var saveError by remember { mutableStateOf<String?>(null) }
 
     when (currentScreen) {
         AppScreen.HOME -> {
             HomeScreen(
                 expenses = expenses,
+                incomes = incomes,
+                onAddIncome = {
+                    saveError = null
+                    currentScreen = AppScreen.ADD_INCOME
+                },
                 onAddExpense = {
                     saveError = null
                     currentScreen = AppScreen.ADD_EXPENSE
                 },
                 onViewHistory = {
                     currentScreen = AppScreen.HISTORY
+                }
+            )
+        }
+
+        AppScreen.ADD_INCOME -> {
+            AddIncomeScreen(
+                saveError = saveError,
+                onBack = {
+                    saveError = null
+                    currentScreen = AppScreen.HOME
+                },
+                onSave = { income ->
+                    val updatedIncomes = listOf(income) + incomes
+                    val saved = runCatching {
+                        incomeStorage.saveIncomes(updatedIncomes)
+                    }.isSuccess
+
+                    if (saved) {
+                        incomes = updatedIncomes
+                        saveError = null
+                        currentScreen = AppScreen.HOME
+                    } else {
+                        saveError = "Couldn't save the income. Please try again."
+                    }
+
+                    saved
                 }
             )
         }
@@ -53,7 +91,7 @@ fun TermRunwayApp() {
                 onSave = { expense ->
                     val updatedExpenses = listOf(expense) + expenses
                     val saved = runCatching {
-                        storage.saveExpenses(updatedExpenses)
+                        expenseStorage.saveExpenses(updatedExpenses)
                     }.isSuccess
 
                     if (saved) {
