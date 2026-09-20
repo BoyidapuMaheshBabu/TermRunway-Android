@@ -33,21 +33,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.termrunway.app.data.Expense
 import com.termrunway.app.data.ExpenseAmount
+import com.termrunway.app.data.ExpenseCategories
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-
-private val categories = listOf(
-    "Food",
-    "Transport",
-    "Education",
-    "Bills",
-    "Shopping",
-    "Entertainment",
-    "Health",
-    "Other"
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,7 +131,7 @@ fun AddExpenseScreen(
                     expanded = categoryExpanded,
                     onDismissRequest = { categoryExpanded = false }
                 ) {
-                    categories.forEach { category ->
+                    ExpenseCategories.ALL.forEach { category ->
                         DropdownMenuItem(
                             text = { Text(category) },
                             onClick = {
