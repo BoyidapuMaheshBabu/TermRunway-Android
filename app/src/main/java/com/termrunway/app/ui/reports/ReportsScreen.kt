@@ -157,7 +157,7 @@ fun ReportsScreen(
                         Text("Savings Goal", style = MaterialTheme.typography.titleLarge)
                         Text(currentGoal.name)
                         Text(
-                            "₹" + ExpenseAmount.format(currentGoal.currentSavedCents) +
+                            "₹" + ExpenseAmount.format(currentGoal.savedAmountCents) +
                                 " / ₹" + ExpenseAmount.format(currentGoal.targetAmountCents)
                         )
                     }

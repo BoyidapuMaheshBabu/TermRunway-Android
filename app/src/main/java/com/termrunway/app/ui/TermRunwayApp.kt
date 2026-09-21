@@ -60,6 +60,7 @@ private enum class AppScreen {
     GOAL
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun TermRunwayApp() {
     val context = LocalContext.current

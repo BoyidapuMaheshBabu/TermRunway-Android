@@ -1,10 +1,9 @@
 package com.termrunway.app.ui.navigation
 
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.weight
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -31,16 +30,14 @@ fun MainBottomBar(
         NavigationBarItem(
             selected = selectedTab == MainTab.CHARTS,
             onClick = { onTabSelected(MainTab.CHARTS) },
-            icon = { Icon(Icons.Filled.BarChart, contentDescription = "Charts") },
+            icon = { Icon(Icons.Filled.List, contentDescription = "Charts") },
             label = { Text("Charts") }
         )
-
-        Spacer(modifier = Modifier.weight(1f))
 
         NavigationBarItem(
             selected = selectedTab == MainTab.REPORTS,
             onClick = { onTabSelected(MainTab.REPORTS) },
-            icon = { Icon(Icons.Filled.Description, contentDescription = "Reports") },
+            icon = { Icon(Icons.Filled.Info, contentDescription = "Reports") },
             label = { Text("Reports") }
         )
 
