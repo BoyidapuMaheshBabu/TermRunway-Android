@@ -20,8 +20,6 @@ fun HomeScreen(
     expenses: List<Expense> = emptyList(),
     incomes: List<Income> = emptyList(),
     forecast: RunwayForecast? = null,
-    onAddExpense: () -> Unit = {},
-    onAddIncome: () -> Unit = {},
     onViewHistory: () -> Unit = {},
     onPlanTerm: () -> Unit = {},
     onViewAnalysis: () -> Unit = {},
@@ -112,10 +110,6 @@ fun HomeScreen(
 
             // Action grid
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onAddIncome, modifier = Modifier.weight(1f)) { Text("Add Income") }
-                    Button(onClick = onAddExpense, modifier = Modifier.weight(1f)) { Text("Add Expense") }
-                }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = onViewHistory, modifier = Modifier.weight(1f)) { Text("History") }
                     OutlinedButton(onClick = onPlanTerm, modifier = Modifier.weight(1f)) { Text("Term Planning") }
