@@ -46,3 +46,4 @@ class FinancialSummaryTest {
         assertEquals(0L, result.totalExpenseCents)
         assertEquals(0L, result.availableBalanceCents)
     }
+}

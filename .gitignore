@@ -1,15 +1,41 @@
-*.iml
-.gradle
+# Gradle
+.gradle/
+
+# Local configuration file
 /local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+
+# Android Studio / IntelliJ IDEA
+/.idea/
+
+# IntelliJ module files
+*.iml
+*.ipr
+*.iws
+
+# Build outputs
+/build/
+/app/build/
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# Captures
+/captures/
+
+# macOS
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+
+# Kotlin
+.kotlin/
+
+# Generated files
+*.log
+
+# Android Studio generated files
+.navigation/
+output-metadata.json
+
+# Temporary files
+*.tmp
+*.temp
