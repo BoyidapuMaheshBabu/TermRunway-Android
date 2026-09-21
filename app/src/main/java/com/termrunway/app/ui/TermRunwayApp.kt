@@ -126,14 +126,6 @@ fun TermRunwayApp() {
                     expenses = expenses,
                     incomes = incomes,
                     forecast = forecast,
-                    onAddIncome = {
-                        saveError = null
-                        currentScreen = AppScreen.ADD_INCOME
-                    },
-                    onAddExpense = {
-                        saveError = null
-                        currentScreen = AppScreen.ADD_EXPENSE
-                    },
                     onViewHistory = { currentScreen = AppScreen.HISTORY },
                     onPlanTerm = { currentScreen = AppScreen.PLANNING },
                     onViewAnalysis = { currentScreen = AppScreen.ANALYSIS },
