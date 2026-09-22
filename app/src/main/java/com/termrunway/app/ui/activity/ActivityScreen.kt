@@ -1,7 +1,11 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.termrunway.app.ui.activity
+
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,7 +38,13 @@ fun ActivityScreen(
     modifier: Modifier = Modifier
 ) {
     var period by remember { mutableStateOf(TrackingPeriod.SEVEN_DAYS) }
-    val range = trackingRange(period)
+    // Hardcoded custom range for now. In a real app we'd have a date picker.
+    val customRange = remember {
+        val today = java.util.Calendar.getInstance().timeInMillis
+        DateRange(today - 14L * 24 * 60 * 60 * 1000, today)
+    }
+
+    val range = trackingRange(period, customRange = customRange)
     val transactions = buildList {
         expenses.filter { it.dateMillis in range.startMillis..range.endMillis }.forEach {
             add(ActivityItem(it.dateMillis, false, it.amountCents, it.category))
@@ -68,7 +78,10 @@ fun ActivityScreen(
                             "  •  Spending ₹" + ExpenseAmount.format(totalExpense),
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         FilterChip(
                             selected = period == TrackingPeriod.SEVEN_DAYS,
                             onClick = { period = TrackingPeriod.SEVEN_DAYS },
@@ -83,6 +96,11 @@ fun ActivityScreen(
                             selected = period == TrackingPeriod.THREE_MONTHS,
                             onClick = { period = TrackingPeriod.THREE_MONTHS },
                             label = { Text("3 Months") }
+                        )
+                        FilterChip(
+                            selected = period == TrackingPeriod.CUSTOM,
+                            onClick = { period = TrackingPeriod.CUSTOM },
+                            label = { Text("Custom") }
                         )
                     }
                 }
