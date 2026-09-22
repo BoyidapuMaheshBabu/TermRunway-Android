@@ -1,14 +1,14 @@
 package com.termrunway.app.ui
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.Column
-import androidx.compose.material3.Button
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -40,6 +40,8 @@ fun TermRunwayApp() {
 
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.HOME) }
     var addMode by rememberSaveable { mutableStateOf<AddMode?>(null) }
+    var showAddSheet by rememberSaveable { mutableStateOf(false) }
+
     var expenses by remember { mutableStateOf(expenseStorage.loadExpenses()) }
     var incomes by remember { mutableStateOf(incomeStorage.loadIncomes()) }
     var plan by remember { mutableStateOf(planStorage.loadPlan()) }
@@ -99,7 +101,7 @@ fun TermRunwayApp() {
                 onTabSelected = { selectedTab = it },
                 onAddTransaction = {
                     saveError = null
-                    addMode = AddMode.EXPENSE
+                    showAddSheet = true
                 }
             )
         },
@@ -125,6 +127,7 @@ fun TermRunwayApp() {
                     runCatching {
                         planStorage.savePlan(newPlan)
                         plan = newPlan
+                        saveError = null
                     }.onFailure {
                         saveError = "Could not save the plan."
                     }
@@ -146,18 +149,32 @@ fun TermRunwayApp() {
         }
     }
 
-    if (addMode == AddMode.EXPENSE) {
-        ModalBottomSheet(onDismissRequest = { addMode = null }) {
+    if (showAddSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAddSheet = false }
+        ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Add Transaction", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "Add Transaction",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    "Choose what you want to record.",
+                    modifier = Modifier.padding(top = 6.dp, bottom = 12.dp)
+                )
                 Button(
-                    onClick = { addMode = AddMode.EXPENSE },
-                    modifier = Modifier.padding(top = 12.dp)
+                    onClick = {
+                        showAddSheet = false
+                        addMode = AddMode.EXPENSE
+                    }
                 ) {
                     Text("Expense")
                 }
                 Button(
-                    onClick = { addMode = AddMode.INCOME },
+                    onClick = {
+                        showAddSheet = false
+                        addMode = AddMode.INCOME
+                    },
                     modifier = Modifier.padding(top = 8.dp, bottom = 24.dp)
                 ) {
                     Text("Income")
