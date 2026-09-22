@@ -2,58 +2,67 @@
 package com.termrunway.app.ui.home
 
 import androidx.compose.material3.ExperimentalMaterial3Api
-
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.termrunway.app.data.Expense
 import com.termrunway.app.data.ExpenseAmount
 import com.termrunway.app.data.Income
-import com.termrunway.app.data.TermPlan
 import com.termrunway.app.logic.DateRange
 import com.termrunway.app.logic.TrackingPeriod
-import com.termrunway.app.logic.calculatePlanAnalysis
 import com.termrunway.app.logic.calculateTrackingSummary
-import com.termrunway.app.logic.endOfDay
-import com.termrunway.app.logic.startOfDay
 import com.termrunway.app.logic.trackingRange
+import java.util.Calendar
 
 @Composable
 fun HomeScreen(
     expenses: List<Expense>,
     incomes: List<Income>,
-    plan: TermPlan?,
-    onOpenPlan: () -> Unit,
     onOpenActivity: () -> Unit,
     onOpenInsights: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val tracking = calculateTrackingSummary(
-        incomes = incomes,
-        expenses = expenses,
-        range = trackingRange(TrackingPeriod.SEVEN_DAYS)
-    )
+    var period by remember { mutableStateOf(TrackingPeriod.ONE_MONTH) }
+    val customRange = remember {
+        val today = Calendar.getInstance().timeInMillis
+        DateRange(today - 14L * 24 * 60 * 60 * 1000, today)
+    }
+
+    val range = trackingRange(period, customRange = customRange)
+    val tracking = calculateTrackingSummary(incomes, expenses, range)
+
+    val totalRecordedIncome = incomes.sumOf { it.amountCents }
+    val totalRecordedExpense = expenses.sumOf { it.amountCents }
+    val currentRecordedBalance = totalRecordedIncome - totalRecordedExpense
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("TermRunway") }) },
+        topBar = { TopAppBar(title = { Text("Tracking Dashboard") }) },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -62,12 +71,42 @@ fun HomeScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("Daily Tracking", style = MaterialTheme.typography.titleLarge)
-                    Text("Last 7 days")
-                    Text("Income: ₹" + ExpenseAmount.format(tracking.totalIncomeCents))
-                    Text("Spending: ₹" + ExpenseAmount.format(tracking.totalExpenseCents))
-                    Text("Average: ₹" + ExpenseAmount.format(tracking.averageDailyExpenseCents) + " / day")
-                    Button(onClick = onOpenActivity) { Text("View Activity") }
+                    Text("Overall Recorded Balance", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Based on all recorded transactions.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("₹" + ExpenseAmount.format(currentRecordedBalance), style = MaterialTheme.typography.headlineMedium)
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Period Analysis", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = period == TrackingPeriod.SEVEN_DAYS,
+                        onClick = { period = TrackingPeriod.SEVEN_DAYS },
+                        label = { Text("7 Days") }
+                    )
+                    FilterChip(
+                        selected = period == TrackingPeriod.ONE_MONTH,
+                        onClick = { period = TrackingPeriod.ONE_MONTH },
+                        label = { Text("1 Month") }
+                    )
+                    FilterChip(
+                        selected = period == TrackingPeriod.THREE_MONTHS,
+                        onClick = { period = TrackingPeriod.THREE_MONTHS },
+                        label = { Text("3 Months") }
+                    )
+                    FilterChip(
+                        selected = period == TrackingPeriod.CUSTOM,
+                        onClick = { period = TrackingPeriod.CUSTOM },
+                        label = { Text("Custom") }
+                    )
                 }
             }
 
@@ -76,28 +115,11 @@ fun HomeScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text("Plan Mode", style = MaterialTheme.typography.titleLarge)
-                    if (plan == null) {
-                        Text("Create a future plan, then compare real transactions against that fixed plan.")
-                        Button(onClick = onOpenPlan) { Text("Create Plan") }
-                    } else {
-                        val planRange = DateRange(
-                            startOfDay(plan.startDateMillis),
-                            endOfDay(plan.endDateMillis)
-                        )
-                        val analysis = calculatePlanAnalysis(plan, expenses, incomes, planRange)
-
-                        Text("Health: " + analysis.healthPercent + "%")
-                        Text("Planned spending: ₹" + ExpenseAmount.format(plan.plannedExpenses.values.sum()))
-                        Text("Actual spending: ₹" + ExpenseAmount.format(analysis.actualSpendingForPeriodCents))
-                        Text(
-                            if (analysis.spendingVarianceCents >= 0L)
-                                "Above plan by ₹" + ExpenseAmount.format(analysis.spendingVarianceCents)
-                            else
-                                "Below plan by ₹" + ExpenseAmount.format(-analysis.spendingVarianceCents)
-                        )
-                        Button(onClick = onOpenPlan) { Text("Open Plan") }
-                    }
+                    Text("Income: ₹" + ExpenseAmount.format(tracking.totalIncomeCents))
+                    Text("Expenses: ₹" + ExpenseAmount.format(tracking.totalExpenseCents))
+                    Text("Net Change: ₹" + ExpenseAmount.format(tracking.netChangeCents))
+                    Text("Average Daily Expense: ₹" + ExpenseAmount.format(tracking.averageDailyExpenseCents))
+                    Text("Transactions: ${tracking.transactionCount}")
                 }
             }
 

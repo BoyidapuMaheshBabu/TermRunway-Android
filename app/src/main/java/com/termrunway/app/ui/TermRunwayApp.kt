@@ -113,8 +113,6 @@ fun TermRunwayApp() {
             MainTab.HOME -> HomeScreen(
                 expenses = expenses,
                 incomes = incomes,
-                plan = plan,
-                onOpenPlan = { selectedTab = MainTab.PLAN },
                 onOpenActivity = { selectedTab = MainTab.ACTIVITY },
                 onOpenInsights = { selectedTab = MainTab.INSIGHTS },
                 modifier = Modifier.padding(innerPadding)
