@@ -338,33 +338,40 @@ private fun PlanResults(
                 style = MaterialTheme.typography.bodyMedium
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                FilterChip(
-                    selected = period == TrackingPeriod.ONE_MONTH,
-                    onClick = { period = TrackingPeriod.ONE_MONTH },
-                    label = { Text("1 Month") }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = period == TrackingPeriod.SEVEN_DAYS,
+                        onClick = { period = TrackingPeriod.SEVEN_DAYS },
+                        label = { Text("7 Days") }
+                    )
+                    FilterChip(
+                        selected = period == TrackingPeriod.ONE_MONTH,
+                        onClick = { period = TrackingPeriod.ONE_MONTH },
+                        label = { Text("1 Month") }
+                    )
+                    FilterChip(
+                        selected = period == TrackingPeriod.THREE_MONTHS,
+                        onClick = { period = TrackingPeriod.THREE_MONTHS },
+                        label = { Text("3 Months") }
+                    )
+                    FilterChip(
+                        selected = period == TrackingPeriod.CUSTOM,
+                        onClick = { period = TrackingPeriod.CUSTOM },
+                        label = { Text("Custom") }
+                    )
+                }
+                Text(
+                    "The Term view uses the entire saved plan period.",
+                    style = MaterialTheme.typography.bodySmall
                 )
-                FilterChip(
-                    selected = period == TrackingPeriod.THREE_MONTHS,
-                    onClick = { period = TrackingPeriod.THREE_MONTHS },
-                    label = { Text("3 Months") }
-                )
-                FilterChip(
-                    selected = period == TrackingPeriod.CUSTOM,
+                Button(
                     onClick = { period = TrackingPeriod.CUSTOM },
-                    label = { Text("Custom") }
-                )
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("View Full Term")
+                }
             }
-            FilterChip(
-                selected = period == TrackingPeriod.SEVEN_DAYS,
-                onClick = { period = TrackingPeriod.SEVEN_DAYS },
-                label = { Text("7 Days") }
-            )
-            FilterChip(
-                selected = false,
-                onClick = { period = TrackingPeriod.CUSTOM },
-                label = { Text("Term is used automatically by opening the full plan below") }
-            )
 
             if (period == TrackingPeriod.CUSTOM) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
