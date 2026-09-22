@@ -294,17 +294,18 @@ private fun PlanResults(
     onEdit: () -> Unit,
     modifier: Modifier
 ) {
-    var period by remember { mutableStateOf(TrackingPeriod.ONE_MONTH) }
+    var period by remember { mutableStateOf(PlanPeriod.TERM) }
     var customStart by remember { mutableStateOf(plan.startDateMillis) }
     var customEnd by remember { mutableStateOf(plan.endDateMillis) }
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
 
     val requestedRange = when (period) {
-        TrackingPeriod.SEVEN_DAYS -> trackingRange(TrackingPeriod.SEVEN_DAYS)
-        TrackingPeriod.ONE_MONTH -> trackingRange(TrackingPeriod.ONE_MONTH)
-        TrackingPeriod.THREE_MONTHS -> trackingRange(TrackingPeriod.THREE_MONTHS)
-        TrackingPeriod.CUSTOM -> DateRange(startOfDay(customStart), endOfDay(customEnd))
+        PlanPeriod.TERM -> DateRange(startOfDay(plan.startDateMillis), endOfDay(plan.endDateMillis))
+        PlanPeriod.SEVEN_DAYS -> trackingRange(TrackingPeriod.SEVEN_DAYS)
+        PlanPeriod.ONE_MONTH -> trackingRange(TrackingPeriod.ONE_MONTH)
+        PlanPeriod.THREE_MONTHS -> trackingRange(TrackingPeriod.THREE_MONTHS)
+        PlanPeriod.CUSTOM -> DateRange(startOfDay(customStart), endOfDay(customEnd))
     }
 
     val analysis: PlanPeriodAnalysis = calculatePlanAnalysis(
@@ -341,39 +342,38 @@ private fun PlanResults(
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(
-                        selected = period == TrackingPeriod.SEVEN_DAYS,
-                        onClick = { period = TrackingPeriod.SEVEN_DAYS },
+                        selected = period == PlanPeriod.TERM,
+                        onClick = { period = PlanPeriod.TERM },
+                        label = { Text("Term") }
+                    )
+                    FilterChip(
+                        selected = period == PlanPeriod.SEVEN_DAYS,
+                        onClick = { period = PlanPeriod.SEVEN_DAYS },
                         label = { Text("7 Days") }
                     )
                     FilterChip(
-                        selected = period == TrackingPeriod.ONE_MONTH,
-                        onClick = { period = TrackingPeriod.ONE_MONTH },
+                        selected = period == PlanPeriod.ONE_MONTH,
+                        onClick = { period = PlanPeriod.ONE_MONTH },
                         label = { Text("1 Month") }
                     )
                     FilterChip(
-                        selected = period == TrackingPeriod.THREE_MONTHS,
-                        onClick = { period = TrackingPeriod.THREE_MONTHS },
+                        selected = period == PlanPeriod.THREE_MONTHS,
+                        onClick = { period = PlanPeriod.THREE_MONTHS },
                         label = { Text("3 Months") }
                     )
                     FilterChip(
-                        selected = period == TrackingPeriod.CUSTOM,
-                        onClick = { period = TrackingPeriod.CUSTOM },
+                        selected = period == PlanPeriod.CUSTOM,
+                        onClick = { period = PlanPeriod.CUSTOM },
                         label = { Text("Custom") }
                     )
                 }
                 Text(
-                    "The Term view uses the entire saved plan period.",
+                    "Term uses the entire saved plan. Other periods show the selected window inside the plan when dates overlap.",
                     style = MaterialTheme.typography.bodySmall
                 )
-                Button(
-                    onClick = { period = TrackingPeriod.CUSTOM },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("View Full Term")
-                }
             }
 
-            if (period == TrackingPeriod.CUSTOM) {
+            if (period == PlanPeriod.CUSTOM) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DateField(
                         "From",
@@ -460,6 +460,15 @@ private fun PlanResults(
             )
         }
     }
+}
+
+@Composable
+private enum class PlanPeriod {
+    TERM,
+    SEVEN_DAYS,
+    ONE_MONTH,
+    THREE_MONTHS,
+    CUSTOM
 }
 
 @Composable
