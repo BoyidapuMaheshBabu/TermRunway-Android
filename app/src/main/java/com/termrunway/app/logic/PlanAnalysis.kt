@@ -183,7 +183,7 @@ private fun proportionalAmount(amount: Long, selectedDays: Int, totalDays: Int):
     return BigDecimal.valueOf(amount)
         .multiply(BigDecimal.valueOf(selectedDays.toLong()))
         .divide(BigDecimal.valueOf(totalDays.toLong()), 0, RoundingMode.HALF_UP)
-        .longValue()
+        .toLong()
 }
 
 private fun calculateHealthPercent(

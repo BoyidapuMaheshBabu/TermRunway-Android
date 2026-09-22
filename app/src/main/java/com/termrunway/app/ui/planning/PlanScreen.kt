@@ -1,4 +1,7 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.termrunway.app.ui.planning
+
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.Arrangement
@@ -462,7 +465,6 @@ private fun PlanResults(
     }
 }
 
-@Composable
 private enum class PlanPeriod {
     TERM,
     SEVEN_DAYS,

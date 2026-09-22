@@ -1,4 +1,7 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.termrunway.app.ui.home
+
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
