@@ -110,16 +110,28 @@ fun HomeScreen(
                 }
             }
 
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("Income: ₹" + ExpenseAmount.format(tracking.totalIncomeCents))
-                    Text("Expenses: ₹" + ExpenseAmount.format(tracking.totalExpenseCents))
-                    Text("Net Change: ₹" + ExpenseAmount.format(tracking.netChangeCents))
-                    Text("Average Daily Expense: ₹" + ExpenseAmount.format(tracking.averageDailyExpenseCents))
-                    Text("Transactions: ${tracking.transactionCount}")
+            if (tracking.transactionCount == 0) {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("No activity in this period", style = MaterialTheme.typography.titleMedium)
+                        Text("You haven't recorded any income or expenses for this period yet.")
+                    }
+                }
+            } else {
+                Card(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Income: ₹" + ExpenseAmount.format(tracking.totalIncomeCents))
+                        Text("Expenses: ₹" + ExpenseAmount.format(tracking.totalExpenseCents))
+                        Text("Net Change: ₹" + ExpenseAmount.format(tracking.netChangeCents))
+                        Text("Average Daily Expense: ₹" + ExpenseAmount.format(tracking.averageDailyExpenseCents))
+                        Text("Transactions: ${tracking.transactionCount}")
+                    }
                 }
             }
 
