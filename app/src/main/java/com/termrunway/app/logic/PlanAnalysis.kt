@@ -137,21 +137,28 @@ fun buildPlanChart(
         .groupBy { startOfDay(it.dateMillis) }
         .mapValues { (_, values) -> values.sumOf { it.amountCents } }
 
+    val plannedBeforeSelected = proportionalAmount(
+        totalPlannedExpenses,
+        (daysBetweenInclusive(planRange.startMillis, selected.startMillis) - 1).coerceAtLeast(0),
+        totalPlanDays
+    )
+
     var actualCumulative = 0L
     val points = mutableListOf<PlanChartPoint>()
     var day = startOfDay(selected.startMillis)
 
     while (day <= startOfDay(selected.endMillis)) {
         actualCumulative += expenseByDay[day] ?: 0L
-        val selectedDays = daysBetweenInclusive(selected.startMillis, day)
+        val elapsedPlanDays = daysBetweenInclusive(planRange.startMillis, day)
+        val plannedCumulative = proportionalAmount(
+            totalPlannedExpenses,
+            elapsedPlanDays,
+            totalPlanDays
+        )
 
         points += PlanChartPoint(
             dayMillis = day,
-            plannedCumulativeSpendCents = proportionalAmount(
-                totalPlannedExpenses,
-                selectedDays,
-                totalPlanDays
-            ),
+            plannedCumulativeSpendCents = (plannedCumulative - plannedBeforeSelected).coerceAtLeast(0L),
             actualCumulativeSpendCents = actualCumulative
         )
 
