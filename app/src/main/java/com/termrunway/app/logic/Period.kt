@@ -47,14 +47,22 @@ fun trackingRange(
             startOfDay(todayMillis - 6L * DAY_MILLIS),
             endOfDay(todayMillis)
         )
-        TrackingPeriod.ONE_MONTH -> DateRange(
-            startOfDay(todayMillis - 29L * DAY_MILLIS),
-            endOfDay(todayMillis)
-        )
-        TrackingPeriod.THREE_MONTHS -> DateRange(
-            startOfDay(todayMillis - 89L * DAY_MILLIS),
-            endOfDay(todayMillis)
-        )
+        TrackingPeriod.ONE_MONTH -> {
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = todayMillis }
+            cal.add(java.util.Calendar.MONTH, -1)
+            DateRange(
+                startOfDay(cal.timeInMillis),
+                endOfDay(todayMillis)
+            )
+        }
+        TrackingPeriod.THREE_MONTHS -> {
+            val cal = java.util.Calendar.getInstance().apply { timeInMillis = todayMillis }
+            cal.add(java.util.Calendar.MONTH, -3)
+            DateRange(
+                startOfDay(cal.timeInMillis),
+                endOfDay(todayMillis)
+            )
+        }
         TrackingPeriod.CUSTOM -> customRange ?: DateRange(
             startOfDay(todayMillis - 29L * DAY_MILLIS),
             endOfDay(todayMillis)

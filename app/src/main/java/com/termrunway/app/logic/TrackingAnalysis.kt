@@ -11,7 +11,10 @@ data class TrackingSummary(
     val netChangeCents: Long,
     val averageDailyExpenseCents: Long,
     val categoryTotalsCents: Map<String, Long>,
-    val transactionCount: Int
+    val categoryPercentages: Map<String, Int>,
+    val transactionCount: Int,
+    val expenseTransactionCount: Int,
+    val incomeTransactionCount: Int
 )
 
 fun calculateTrackingSummary(
@@ -26,44 +29,52 @@ fun calculateTrackingSummary(
     val expense = periodExpenses.sumOf { it.amountCents }
     val days = daysBetweenInclusive(range.startMillis, range.endMillis).coerceAtLeast(1)
 
+    val categoryTotals = periodExpenses
+        .groupBy { it.category }
+        .mapValues { (_, values) -> values.sumOf { it.amountCents } }
+        .toList()
+        .sortedByDescending { it.second }
+        .toMap()
+
+    val categoryPercentages = categoryTotals.mapValues { (_, total) ->
+        if (expense == 0L) 0 else ((total.toDouble() / expense.toDouble()) * 100).toInt()
+    }
+
     return TrackingSummary(
         range = range,
         totalIncomeCents = income,
         totalExpenseCents = expense,
         netChangeCents = income - expense,
         averageDailyExpenseCents = expense / days,
-        categoryTotalsCents = periodExpenses
-            .groupBy { it.category }
-            .mapValues { (_, values) -> values.sumOf { it.amountCents } }
-            .toList()
-            .sortedByDescending { it.second }
-            .toMap(),
-        transactionCount = periodIncomes.size + periodExpenses.size
+        categoryTotalsCents = categoryTotals,
+        categoryPercentages = categoryPercentages,
+        transactionCount = periodIncomes.size + periodExpenses.size,
+        expenseTransactionCount = periodExpenses.size,
+        incomeTransactionCount = periodIncomes.size
     )
 }
 
-fun trackingInsight(summary: TrackingSummary, previous: TrackingSummary?): String? {
-    val topCategory = summary.categoryTotalsCents.maxByOrNull { it.value } ?: return null
-    val current = "Your largest expense category is " +
-        topCategory.key +
-        " at ₹" +
-        formatRupees(topCategory.value) +
-        " for this period."
+fun trackingInsights(summary: TrackingSummary): List<String> {
+    val insights = mutableListOf<String>()
 
-    if (previous != null && previous.totalExpenseCents > 0L) {
-        val difference = summary.totalExpenseCents - previous.totalExpenseCents
-        val comparison = when {
-            difference > 0L ->
-                "That is ₹" + formatRupees(difference) + " more spending than the previous comparison period."
-            difference < 0L ->
-                "That is ₹" + formatRupees(-difference) + " less spending than the previous comparison period."
-            else ->
-                "Your total spending is about the same as the previous comparison period."
-        }
-        return current + " " + comparison
+    val topCategory = summary.categoryTotalsCents.maxByOrNull { it.value }
+    if (topCategory != null) {
+        insights.add("${topCategory.key} was your largest expense category during this period.")
     }
 
-    return current
+    if (summary.totalExpenseCents > 0L || summary.totalIncomeCents > 0L) {
+        insights.add("Your recorded income was ₹${formatRupees(summary.totalIncomeCents)} and recorded expenses were ₹${formatRupees(summary.totalExpenseCents)}.")
+    }
+
+    if (summary.transactionCount > 0) {
+        insights.add("You recorded ${summary.transactionCount} transactions during this period.")
+    }
+
+    if (summary.totalExpenseCents > 0L) {
+        insights.add("Your average daily expense was ₹${formatRupees(summary.averageDailyExpenseCents)}.")
+    }
+
+    return insights
 }
 
 fun formatRupees(cents: Long): String =
