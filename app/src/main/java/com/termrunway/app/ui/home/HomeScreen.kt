@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Paid
 import androidx.compose.material.icons.outlined.Wallet
 import androidx.compose.material3.Card
@@ -85,7 +85,7 @@ fun HomeScreen(
                     Text("TermRunway", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                 }
                 IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Outlined.Info, contentDescription = "Settings")
+                    Icon(Icons.Outlined.Settings, contentDescription = "Settings")
                 }
             }
         }
