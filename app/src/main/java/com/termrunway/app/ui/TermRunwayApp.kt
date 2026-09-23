@@ -20,8 +20,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.termrunway.app.data.AppData
@@ -64,11 +64,14 @@ fun TermRunwayApp() {
         }
     }
 
-    val createBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    val createBackup = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching {
-            context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(repository.exportJson(data)) }
-                ?: error("Could not open backup destination.")
+            context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use {
+                it.write(repository.exportJson(data))
+            } ?: error("Could not open backup destination.")
         }.onSuccess {
             snackbarMessage = "Backup created."
         }.onFailure {
@@ -76,11 +79,14 @@ fun TermRunwayApp() {
         }
     }
 
-    val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val pickBackup = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching {
-            val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
-                ?: error("Could not read the selected file.")
+            val json = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use {
+                it.readText()
+            } ?: error("Could not read the selected file.")
             restoreData = repository.parseBackup(json)
         }.onFailure {
             snackbarMessage = it.message ?: "That file is not a valid TermRunway backup."
@@ -110,30 +116,49 @@ fun TermRunwayApp() {
                 SettingsScreen(
                     data = data,
                     onBack = { settingsOpen = false },
-                    onSaveUsername = { name -> persist(data.copy(username = name), "Profile updated.") },
-                    onSaveDailyLimit = { cents -> persist(data.copy(dailyLimitCents = cents), "Daily limit updated.") },
-                    onThemeChange = { theme -> persist(data.copy(theme = theme), "Theme updated.") },
+                    onSaveUsername = { name ->
+                        persist(data.copy(username = name), "Profile updated.")
+                    },
+                    onSaveDailyLimit = { cents ->
+                        persist(data.copy(dailyLimitCents = cents), "Daily limit updated.")
+                    },
+                    onThemeChange = { theme ->
+                        persist(data.copy(theme = theme), "Theme updated.")
+                    },
                     onCreateBackup = { createBackup.launch("termrunway-backup.json") },
-                    onPickBackup = { pickBackup.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                    onPickBackup = {
+                        pickBackup.launch(arrayOf("application/json", "text/plain", "*/*"))
+                    },
                     onDeleteAll = { deleteAllPending = true }
                 )
             }
 
             else -> {
                 val selectedTab = MainTab.valueOf(selectedTabName)
+
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     snackbarHost = { SnackbarHost(snackbarHost) },
-                    bottomBar = { MainBottomBar(selectedTab, onTabSelected = { selectedTabName = it.name }) },
+                    bottomBar = {
+                        MainBottomBar(
+                            selectedTab = selectedTab,
+                            onTabSelected = { selectedTabName = it.name }
+                        )
+                    },
                     floatingActionButton = {
                         if (selectedTab == MainTab.TRACK) {
-                            FloatingActionButton(onClick = {
-                                editorRequest = EditorRequest(
-                                    kind = EditorRequest.Kind.EXPENSE,
-                                    defaultDateMillis = startOfDay(System.currentTimeMillis())
+                            FloatingActionButton(
+                                onClick = {
+                                    editorRequest = EditorRequest(
+                                        kind = EditorRequest.Kind.EXPENSE,
+                                        defaultDateMillis = startOfDay(System.currentTimeMillis())
+                                    )
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Add,
+                                    contentDescription = "Add transaction"
                                 )
-                            }) {
-                                Icon(Icons.Outlined.Add, contentDescription = "Add transaction")
                             }
                         }
                     }
@@ -143,8 +168,12 @@ fun TermRunwayApp() {
                             data = data,
                             contentPadding = padding,
                             onSettings = { settingsOpen = true },
-                            onOpenTrack = { selectedTabName = MainTab.TRACK.name },
-                            onOpenInsights = { selectedTabName = MainTab.INSIGHTS.name },
+                            onOpenTrack = {
+                                selectedTabName = MainTab.TRACK.name
+                            },
+                            onOpenInsights = {
+                                selectedTabName = MainTab.INSIGHTS.name
+                            },
                             onAddExpense = {
                                 editorRequest = EditorRequest(
                                     kind = EditorRequest.Kind.EXPENSE,
@@ -164,7 +193,9 @@ fun TermRunwayApp() {
                             data = data,
                             contentPadding = padding,
                             onSettings = { settingsOpen = true },
-                            onAdd = { day -> editorRequest = EditorRequest(defaultDateMillis = day) },
+                            onAdd = { day ->
+                                editorRequest = EditorRequest(defaultDateMillis = day)
+                            },
                             onEdit = { editorRequest = it }
                         )
 
@@ -206,13 +237,19 @@ fun TermRunwayApp() {
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = {
-                        restoreData = null
-                        persist(restored, "Backup restored.")
-                    }) { Text("Restore") }
+                    TextButton(
+                        onClick = {
+                            restoreData = null
+                            persist(restored, "Backup restored.")
+                        }
+                    ) {
+                        Text("Restore")
+                    }
                 },
                 dismissButton = {
-                    TextButton(onClick = { restoreData = null }) { Text("Cancel") }
+                    TextButton(onClick = { restoreData = null }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }
@@ -222,16 +259,25 @@ fun TermRunwayApp() {
                 onDismissRequest = { deleteAllPending = false },
                 title = { Text("Delete all local data?") },
                 text = {
-                    Text("This removes transactions, name, limit, and theme from this phone. A backup is the only way to recover it.")
+                    Text(
+                        "This removes transactions, name, limit, and theme from this phone. " +
+                            "A backup is the only way to recover it."
+                    )
                 },
                 confirmButton = {
-                    TextButton(onClick = {
-                        deleteAllPending = false
-                        persist(AppData(), "All local data deleted.")
-                    }) { Text("Delete all") }
+                    TextButton(
+                        onClick = {
+                            deleteAllPending = false
+                            persist(AppData(), "All local data deleted.")
+                        }
+                    ) {
+                        Text("Delete all")
+                    }
                 },
                 dismissButton = {
-                    TextButton(onClick = { deleteAllPending = false }) { Text("Cancel") }
+                    TextButton(onClick = { deleteAllPending = false }) {
+                        Text("Cancel")
+                    }
                 }
             )
         }
