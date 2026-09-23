@@ -5,16 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.termrunway.app.ui.TermRunwayApp
-import com.termrunway.app.ui.theme.TermRunwayTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            TermRunwayTheme {
-                TermRunwayApp()
-            }
-        }
+        setContent { TermRunwayApp() }
     }
 }
