@@ -16,7 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.ShowChart
-import androidx.compose.material.icons.outlined.Wallet
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -78,7 +78,7 @@ fun InsightsScreen(
                     Text("Insights", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text("Understand your spending", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = onSettings) { Icon(Icons.Outlined.Wallet, "Settings") }
+                IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, "Settings") }
             }
         }
 
