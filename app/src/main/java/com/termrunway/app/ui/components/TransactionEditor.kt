@@ -4,223 +4,373 @@ import android.app.DatePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Paid
-import androidx.compose.material.icons.outlined.Wallet
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.height
+import com.termrunway.app.data.AppData
 import com.termrunway.app.data.Expense
 import com.termrunway.app.data.ExpenseCategories
 import com.termrunway.app.data.Income
-import com.termrunway.app.ui.daily.formatLongDate
-import com.termrunway.app.ui.daily.parseAmountCents
-import com.termrunway.app.ui.daily.startOfDay
+import com.termrunway.app.domain.parseMoneyToCents
+import com.termrunway.app.util.dayOnlyWithTime
+import com.termrunway.app.util.formatDay
+import com.termrunway.app.util.mergeDateKeepingTime
+import com.termrunway.app.util.startOfDay
 import java.util.Calendar
-
-enum class TransactionType { EXPENSE, INCOME }
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionEditor(
-    initialType: TransactionType,
-    expense: Expense? = null,
-    income: Income? = null,
+    request: EditorRequest,
+    currentData: AppData,
     onDismiss: () -> Unit,
-    onSaveExpense: (Expense) -> Unit,
-    onSaveIncome: (Income) -> Unit,
-    onDeleteExpense: (() -> Unit)? = null,
-    onDeleteIncome: (() -> Unit)? = null
+    onSave: (AppData) -> Unit,
+    onDelete: (AppData) -> Unit
 ) {
-    val editing = expense != null || income != null
-    var type by rememberSaveable(expense?.id, income?.id) { mutableStateOf(initialType) }
-    var amount by rememberSaveable(expense?.id, income?.id) {
-        mutableStateOf(expense?.amountCents?.let { com.termrunway.app.ui.daily.formatWholeRupees(it) } ?: income?.amountCents?.let { com.termrunway.app.ui.daily.formatWholeRupees(it) } ?: "")
-    }
-    var category by rememberSaveable(expense?.id) { mutableStateOf(expense?.category ?: ExpenseCategories.ALL.first()) }
-    var source by rememberSaveable(income?.id) { mutableStateOf(income?.source ?: "") }
-    var note by rememberSaveable(expense?.id, income?.id) { mutableStateOf(expense?.note ?: income?.note.orEmpty()) }
-    var dateMillis by rememberSaveable(expense?.id, income?.id) { mutableStateOf(expense?.dateMillis ?: income?.dateMillis ?: System.currentTimeMillis()) }
-    var amountError by rememberSaveable { mutableStateOf<String?>(null) }
-    var sourceError by rememberSaveable { mutableStateOf<String?>(null) }
-    var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
-    val context = LocalContext.current
+    val existingExpense = request.expense
+    val existingIncome = request.income
+    val editing = existingExpense != null || existingIncome != null
 
-    ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.imePadding()) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(if (type == TransactionType.INCOME) Icons.Outlined.Paid else Icons.Outlined.Wallet, null)
-                Spacer(Modifier.width(8.dp))
-                Text(if (editing) "Edit transaction" else "Add transaction", fontWeight = FontWeight.Bold, style = androidx.compose.material3.MaterialTheme.typography.headlineSmall)
+    var isExpense by remember(request) {
+        mutableStateOf(
+            when {
+                existingIncome != null -> false
+                existingExpense != null -> true
+                request.kind == EditorRequest.Kind.INCOME -> false
+                else -> true
             }
+        )
+    }
+    var amountText by remember(request) {
+        mutableStateOf(
+            when {
+                existingExpense != null -> (existingExpense.amountCents / 100.0).toString()
+                existingIncome != null -> (existingIncome.amountCents / 100.0).toString()
+                else -> ""
+            }
+        )
+    }
+    var category by remember(request) {
+        mutableStateOf(existingExpense?.category ?: ExpenseCategories.ALL.first())
+    }
+    var source by remember(request) {
+        mutableStateOf(existingIncome?.source ?: "")
+    }
+    var note by remember(request) {
+        mutableStateOf(existingExpense?.note ?: existingIncome?.note.orEmpty())
+    }
+    var selectedDay by remember(request) {
+        mutableStateOf(
+            startOfDay(
+                existingExpense?.dateMillis
+                    ?: existingIncome?.dateMillis
+                    ?: request.defaultDateMillis
+            )
+        )
+    }
+    var categoryDialog by remember { mutableStateOf(false) }
+    var deleteDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                listOf(TransactionType.EXPENSE, TransactionType.INCOME).forEachIndexed { index, choice ->
-                    SegmentedButton(
-                        selected = type == choice,
-                        onClick = { if (!editing) type = choice },
-                        enabled = !editing,
-                        shape = SegmentedButtonDefaults.itemShape(index, 2)
-                    ) { Text(if (choice == TransactionType.EXPENSE) "Expense" else "Income") }
+    val context = LocalContext.current
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    fun chooseDate() {
+        val initial = Calendar.getInstance().apply { timeInMillis = selectedDay }
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                val chosen = Calendar.getInstance().apply {
+                    set(year, month, dayOfMonth, 12, 0, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+                selectedDay = startOfDay(chosen)
+            },
+            initial.get(Calendar.YEAR),
+            initial.get(Calendar.MONTH),
+            initial.get(Calendar.DAY_OF_MONTH)
+        ).also { it.datePicker.maxDate = System.currentTimeMillis() }.show()
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 720.dp)
+                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = if (editing) "Edit transaction" else "Add transaction",
+                style = MaterialTheme.typography.titleLarge
+            )
+
+            if (!editing) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = isExpense,
+                        onClick = {
+                            isExpense = true
+                            errorMessage = null
+                        },
+                        label = { Text("Expense") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = !isExpense,
+                        onClick = {
+                            isExpense = false
+                            errorMessage = null
+                        },
+                        label = { Text("Income") },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
             OutlinedTextField(
-                value = amount,
-                onValueChange = { if (it.length <= 16) { amount = it; amountError = null } },
-                label = { Text("Amount") },
-                leadingIcon = { Text("₹", fontWeight = FontWeight.Bold) },
+                value = amountText,
+                onValueChange = {
+                    amountText = it.filter { character ->
+                        character.isDigit() || character == '.'
+                    }.take(14)
+                    errorMessage = null
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Amount (₹)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                isError = amountError != null,
-                supportingText = { amountError?.let { Text(it) } },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                singleLine = true
             )
 
-            if (type == TransactionType.EXPENSE) {
-                Text("Category", fontWeight = FontWeight.SemiBold)
-                ExpenseCategories.ALL.chunked(2).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { item ->
-                            AssistChip(
-                                onClick = { category = item },
-                                label = { Text(item, maxLines = 1) },
-                                leadingIcon = { androidx.compose.material3.Icon(com.termrunway.app.ui.daily.categoryIcon(item), null, Modifier.size(18.dp)) },
-                                colors = AssistChipDefaults.assistChipColors(
-                                    containerColor = if (category == item) androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer else androidx.compose.material3.MaterialTheme.colorScheme.surface
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
+            if (isExpense) {
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = {},
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Category") },
+                    readOnly = true,
+                    trailingIcon = {
+                        TextButton(onClick = { categoryDialog = true }) {
+                            Text("Change")
                         }
-                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
-                }
+                )
             } else {
                 OutlinedTextField(
                     value = source,
-                    onValueChange = { source = it; sourceError = null },
+                    onValueChange = {
+                        source = it.take(50)
+                        errorMessage = null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
                     label = { Text("Income source") },
-                    placeholder = { Text("Allowance, salary, scholarship...") },
-                    isError = sourceError != null,
-                    supportingText = { sourceError?.let { Text(it) } },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    singleLine = true
                 )
             }
 
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                androidx.compose.material3.Icon(Icons.Outlined.CalendarMonth, null, tint = androidx.compose.material3.MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Date", fontWeight = FontWeight.SemiBold)
-                    Text(formatLongDate(dateMillis), color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedTextField(
+                value = formatDay(selectedDay),
+                onValueChange = {},
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Date") },
+                readOnly = true,
+                trailingIcon = {
+                    TextButton(onClick = ::chooseDate) {
+                        Text("Change")
+                    }
                 }
-                TextButton(onClick = {
-                    val c = Calendar.getInstance().apply { timeInMillis = dateMillis }
-                    DatePickerDialog(
-                        context,
-                        { _, year, month, day ->
-                            val chosen = Calendar.getInstance().apply {
-                                set(year, month, day, 12, 0, 0)
-                                set(Calendar.MILLISECOND, 0)
-                            }
-                            dateMillis = startOfDay(chosen.timeInMillis)
-                        },
-                        c.get(Calendar.YEAR),
-                        c.get(Calendar.MONTH),
-                        c.get(Calendar.DAY_OF_MONTH)
-                    ).also { it.datePicker.maxDate = System.currentTimeMillis() }.show()
-                }) { Text("Change") }
-            }
+            )
 
             OutlinedTextField(
                 value = note,
-                onValueChange = { if (it.length <= 120) note = it },
+                onValueChange = { note = it.take(120) },
+                modifier = Modifier.fillMaxWidth(),
                 label = { Text("Note (optional)") },
-                maxLines = 3,
-                modifier = Modifier.fillMaxWidth()
+                minLines = 2,
+                maxLines = 4
             )
 
-            Row(Modifier.fillMaxWidth().padding(bottom = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (editing) {
-                    OutlinedButton(onClick = { showDeleteConfirm = true }, modifier = Modifier.weight(1f)) {
-                        androidx.compose.material3.Icon(Icons.Outlined.Delete, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("Delete")
-                    }
-                }
-                Button(
-                    onClick = {
-                        val cents = parseAmountCents(amount)
-                        amountError = if (cents == null) "Enter an amount greater than ₹0." else null
-                        sourceError = if (type == TransactionType.INCOME && source.trim().isBlank()) "Enter an income source." else null
-                        if (cents != null && sourceError == null) {
-                            if (type == TransactionType.EXPENSE) {
-                                onSaveExpense(Expense(expense?.id ?: java.util.UUID.randomUUID().toString(), cents, category, dateMillis, note.trim()))
-                            } else {
-                                onSaveIncome(Income(income?.id ?: java.util.UUID.randomUUID().toString(), cents, source.trim(), dateMillis, note.trim()))
-                            }
+            errorMessage?.let { message ->
+                Text(message, color = MaterialTheme.colorScheme.error)
+            }
+
+            Button(
+                onClick = {
+                    val amount = parseMoneyToCents(amountText)
+                    when {
+                        amount == null -> {
+                            errorMessage = "Enter a valid amount greater than ₹0."
                         }
-                    },
-                    modifier = Modifier.weight(1f).height(52.dp)
-                ) { Text(if (editing) "Save changes" else "Save") }
+                        isExpense && category.isBlank() -> {
+                            errorMessage = "Choose a category."
+                        }
+                        !isExpense && source.trim().isBlank() -> {
+                            errorMessage = "Enter an income source."
+                        }
+                        else -> {
+                            val oldDate = existingExpense?.dateMillis ?: existingIncome?.dateMillis
+                            val newDate = if (oldDate != null) {
+                                if (startOfDay(oldDate) == selectedDay) {
+                                    oldDate
+                                } else {
+                                    mergeDateKeepingTime(selectedDay, oldDate)
+                                }
+                            } else {
+                                dayOnlyWithTime(
+                                    selectedDay,
+                                    preferCurrentTime =
+                                        selectedDay == startOfDay(System.currentTimeMillis())
+                                )
+                            }
+
+                            val updated = if (isExpense) {
+                                val expense = Expense(
+                                    id = existingExpense?.id ?: UUID.randomUUID().toString(),
+                                    amountCents = amount,
+                                    category = category.trim(),
+                                    dateMillis = newDate,
+                                    note = note.trim()
+                                )
+                                currentData.copy(
+                                    expenses = currentData.expenses
+                                        .filterNot { it.id == expense.id }
+                                        .plus(expense)
+                                        .sortedByDescending { it.dateMillis }
+                                )
+                            } else {
+                                val income = Income(
+                                    id = existingIncome?.id ?: UUID.randomUUID().toString(),
+                                    amountCents = amount,
+                                    source = source.trim(),
+                                    dateMillis = newDate,
+                                    note = note.trim()
+                                )
+                                currentData.copy(
+                                    incomes = currentData.incomes
+                                        .filterNot { it.id == income.id }
+                                        .plus(income)
+                                        .sortedByDescending { it.dateMillis }
+                                )
+                            }
+
+                            onSave(updated)
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (editing) "Save changes" else "Save transaction")
+            }
+
+            if (editing) {
+                TextButton(
+                    onClick = { deleteDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Delete transaction", color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }
 
-    if (showDeleteConfirm) {
+    if (categoryDialog) {
         AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete transaction?") },
-            text = { Text("This transaction will be removed from your tracking and insights.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteConfirm = false
-                    if (expense != null) onDeleteExpense?.invoke() else onDeleteIncome?.invoke()
-                }) { Text("Delete", color = androidx.compose.material3.MaterialTheme.colorScheme.error) }
+            onDismissRequest = { categoryDialog = false },
+            title = { Text("Choose category") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ExpenseCategories.ALL.forEach { option ->
+                        Surface(
+                            onClick = {
+                                category = option
+                                categoryDialog = false
+                                errorMessage = null
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (option == category) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }
+                        ) {
+                            Text(option, modifier = Modifier.padding(12.dp))
+                        }
+                    }
+                }
             },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") } }
+            confirmButton = {}
+        )
+    }
+
+    if (deleteDialog) {
+        AlertDialog(
+            onDismissRequest = { deleteDialog = false },
+            title = { Text("Delete this transaction?") },
+            text = { Text("This removes the record from your local history.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deleteDialog = false
+                        val updated = if (existingExpense != null) {
+                            currentData.copy(
+                                expenses = currentData.expenses.filterNot {
+                                    it.id == existingExpense.id
+                                }
+                            )
+                        } else {
+                            currentData.copy(
+                                incomes = currentData.incomes.filterNot {
+                                    it.id == existingIncome!!.id
+                                }
+                            )
+                        }
+                        onDelete(updated)
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteDialog = false }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }

@@ -1,89 +1,33 @@
-# TermRunway Android 💸
+# TermRunway Android
 
-> **A student-focused Android app for understanding everyday money through simple, local-first tracking.**
+TermRunway is a native Android student-finance app built with Kotlin and Jetpack Compose.
 
-TermRunway Android is being built as an offline-first student finance app. Version 1 focuses completely on the **Daily Tracker**. Term planning and term-flow management are intentionally kept out of the v1 navigation until the Daily Tracker is complete.
+## Current product scope
 
-## Daily Tracker
+The active product is Daily Tracking:
 
-Daily Tracker answers:
+- Home: today's spending, income, net, recent activity, quick actions.
+- Track: day-by-day navigation, calendar selection, add/edit/delete transactions.
+- Insights: 7/30/90-day spending and income summaries with category breakdown.
+- Settings: profile name, informational daily limit, theme, backup/restore, local data reset.
+- Storage: local JSON on the device. No account or server is required.
 
-> **What happened?**
+Term Mode is intentionally not active in this rebuild. It will be designed after Daily Tracking is stable.
 
-Students can:
+## Architecture
 
-- record expenses
-- record income
-- choose an expense category or income source
-- attach an optional note
-- choose today or an earlier date
-- review a day at a time
-- edit or delete transactions
-- set an optional daily spending limit
-- receive small informational spending indications without blocking transactions
+- data/: models and local persistence/backup format.
+- domain/: pure money and financial calculations.
+- ui/components/: reusable finance UI and the transaction editor.
+- ui/screens/: Home, Track, Insights, Settings, and first-run setup.
+- ui/navigation/: bottom navigation.
+- ui/theme/: visual system.
+- util/: date and money formatting.
 
-The app uses the same underlying transaction data for Home, Track, and Insights.
+The screen layer owns UI state and persistence goes through TermRunwayRepository. The repository validates data before writing and fully parses a backup before a restore can replace local data.
 
-## Screens
+## Development rule
 
-| Screen | Purpose |
-| --- | --- |
-| **Home** | Quick view of today's spending, income, recent activity, and the next useful action. |
-| **Track** | Detailed day-by-day transaction recording and review. |
-| **Insights** | Understand spending patterns and category totals over selected periods. |
-| **Settings** | Profile, daily limit, theme, backup/restore, and data deletion. |
+Build -> Problem -> Explore -> Fix -> Improve -> Test
 
-## Backup & Restore
-
-TermRunway can export a complete restoreable JSON backup containing local profile information, expenses, income, and relevant preferences.
-
-Backups use a filename such as:
-
-```text
-TermRunway_Mahesh_2026-09-23.json
-```
-
-Calculated totals and charts are not stored as the source of truth. They are rebuilt from restored transaction data.
-
-## Product principles
-
-- Money values are primary; percentages are not part of the core planning experience.
-- A high-spending day is not automatically treated as a failure.
-- Daily limits are informational and never block a real transaction.
-- Empty states and insufficient-data states are explicit rather than showing fake statistics.
-- User data remains local unless the user deliberately creates or restores a backup.
-
-## Technology
-
-- Kotlin
-- Jetpack Compose
-- Material 3
-- Android SDK
-- AndroidX
-- Gradle
-- Git and GitHub
-
-## Development approach
-
-```text
-Understand
-   ↓
-Design
-   ↓
-Build
-   ↓
-Test
-   ↓
-Fix
-   ↓
-Improve
-```
-
-Term Mode will be implemented separately after the Daily Tracker has been completed and validated.
-
-## Developer
-
-**Boyidapu Mahesh Babu**
-
-GitHub: [@BoyidapuMaheshBabu](https://github.com/BoyidapuMaheshBabu)
-
+Do not add Term Mode until the Daily Tracking loop is reliable on a physical device.
