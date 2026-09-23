@@ -23,7 +23,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -111,7 +111,7 @@ fun TrackScreen(
                     }
                 }
                 IconButton(
-                    enabled = selectedDay < today,
+                    enabled = selectedDay.compareTo(today) < 0,
                     onClick = { selectedDay = addDays(selectedDay, 1) }
                 ) {
                     Icon(Icons.Outlined.ArrowForward, contentDescription = "Next day")
