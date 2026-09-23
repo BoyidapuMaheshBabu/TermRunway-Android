@@ -12,7 +12,7 @@ class TermRunwayRepository(context: Context) {
     @Synchronized
     fun load(): AppData {
         if (!file.exists()) return AppData()
-        return runCatching { decode(file.readText()).first }.getOrDefault(AppData())
+        return runCatching { decode(JSONObject(file.readText())).first }.getOrDefault(AppData())
     }
 
     @Synchronized
