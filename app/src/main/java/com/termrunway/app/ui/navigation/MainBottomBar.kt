@@ -1,7 +1,7 @@
 package com.termrunway.app.ui.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.ShowChart
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material3.Icon
@@ -28,7 +28,7 @@ fun MainBottomBar(selectedTab: MainTab, onTabSelected: (MainTab) -> Unit) {
         NavigationBarItem(
             selected = selectedTab == MainTab.INSIGHTS,
             onClick = { onTabSelected(MainTab.INSIGHTS) },
-            icon = { Icon(Icons.Outlined.BarChart, contentDescription = "Insights") },
+            icon = { Icon(Icons.Outlined.ShowChart, contentDescription = "Insights") },
             label = { Text("Insights") }
         )
     }
