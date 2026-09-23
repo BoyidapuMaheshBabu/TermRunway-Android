@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,21 +55,42 @@ fun TransactionEditor(
     val existingIncome = request.income
     val editing = existingExpense != null || existingIncome != null
 
-    var isExpense by remember(request) { mutableStateOf(existingIncome == null) }
+    var isExpense by remember(request) {
+        mutableStateOf(
+            when {
+                existingIncome != null -> false
+                existingExpense != null -> true
+                request.kind == EditorRequest.Kind.INCOME -> false
+                else -> true
+            }
+        )
+    }
     var amountText by remember(request) {
         mutableStateOf(
             when {
-                existingExpense != null -> existingExpense.amountCents.toDouble().div(100.0).toString()
-                existingIncome != null -> existingIncome.amountCents.toDouble().div(100.0).toString()
+                existingExpense != null -> (existingExpense.amountCents / 100.0).toString()
+                existingIncome != null -> (existingIncome.amountCents / 100.0).toString()
                 else -> ""
             }
         )
     }
-    var category by remember(request) { mutableStateOf(existingExpense?.category ?: ExpenseCategories.ALL.first()) }
-    var source by remember(request) { mutableStateOf(existingIncome?.source ?: "") }
-    var note by remember(request) { mutableStateOf(existingExpense?.note ?: existingIncome?.note ?: "") }
+    var category by remember(request) {
+        mutableStateOf(existingExpense?.category ?: ExpenseCategories.ALL.first())
+    }
+    var source by remember(request) {
+        mutableStateOf(existingIncome?.source ?: "")
+    }
+    var note by remember(request) {
+        mutableStateOf(existingExpense?.note ?: existingIncome?.note.orEmpty())
+    }
     var selectedDay by remember(request) {
-        mutableStateOf(startOfDay(existingExpense?.dateMillis ?: existingIncome?.dateMillis ?: request.defaultDateMillis))
+        mutableStateOf(
+            startOfDay(
+                existingExpense?.dateMillis
+                    ?: existingIncome?.dateMillis
+                    ?: request.defaultDateMillis
+            )
+        )
     }
     var categoryDialog by remember { mutableStateOf(false) }
     var deleteDialog by remember { mutableStateOf(false) }
@@ -110,21 +131,30 @@ fun TransactionEditor(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                if (editing) "Edit transaction" else "Add transaction",
+                text = if (editing) "Edit transaction" else "Add transaction",
                 style = MaterialTheme.typography.titleLarge
             )
 
             if (!editing) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     FilterChip(
                         selected = isExpense,
-                        onClick = { isExpense = true; errorMessage = null },
+                        onClick = {
+                            isExpense = true
+                            errorMessage = null
+                        },
                         label = { Text("Expense") },
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
                         selected = !isExpense,
-                        onClick = { isExpense = false; errorMessage = null },
+                        onClick = {
+                            isExpense = false
+                            errorMessage = null
+                        },
                         label = { Text("Income") },
                         modifier = Modifier.weight(1f)
                     )
@@ -133,7 +163,12 @@ fun TransactionEditor(
 
             OutlinedTextField(
                 value = amountText,
-                onValueChange = { amountText = it.filter { ch -> ch.isDigit() || ch == '.' }.take(14); errorMessage = null },
+                onValueChange = {
+                    amountText = it.filter { character ->
+                        character.isDigit() || character == '.'
+                    }.take(14)
+                    errorMessage = null
+                },
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Amount (₹)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -147,12 +182,19 @@ fun TransactionEditor(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Category") },
                     readOnly = true,
-                    trailingIcon = { TextButton(onClick = { categoryDialog = true }) { Text("Change") } }
+                    trailingIcon = {
+                        TextButton(onClick = { categoryDialog = true }) {
+                            Text("Change")
+                        }
+                    }
                 )
             } else {
                 OutlinedTextField(
                     value = source,
-                    onValueChange = { source = it.take(50); errorMessage = null },
+                    onValueChange = {
+                        source = it.take(50)
+                        errorMessage = null
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Income source") },
                     singleLine = true
@@ -165,7 +207,11 @@ fun TransactionEditor(
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("Date") },
                 readOnly = true,
-                trailingIcon = { TextButton(onClick = ::chooseDate) { Text("Change") } }
+                trailingIcon = {
+                    TextButton(onClick = ::chooseDate) {
+                        Text("Change")
+                    }
+                }
             )
 
             OutlinedTextField(
@@ -177,23 +223,36 @@ fun TransactionEditor(
                 maxLines = 4
             )
 
-            errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            errorMessage?.let { message ->
+                Text(message, color = MaterialTheme.colorScheme.error)
+            }
 
             Button(
                 onClick = {
                     val amount = parseMoneyToCents(amountText)
                     when {
-                        amount == null -> errorMessage = "Enter a valid amount greater than ₹0."
-                        isExpense && category.isBlank() -> errorMessage = "Choose a category."
-                        !isExpense && source.trim().isBlank() -> errorMessage = "Enter an income source."
+                        amount == null -> {
+                            errorMessage = "Enter a valid amount greater than ₹0."
+                        }
+                        isExpense && category.isBlank() -> {
+                            errorMessage = "Choose a category."
+                        }
+                        !isExpense && source.trim().isBlank() -> {
+                            errorMessage = "Enter an income source."
+                        }
                         else -> {
                             val oldDate = existingExpense?.dateMillis ?: existingIncome?.dateMillis
                             val newDate = if (oldDate != null) {
-                                if (startOfDay(oldDate) == selectedDay) oldDate else mergeDateKeepingTime(selectedDay, oldDate)
+                                if (startOfDay(oldDate) == selectedDay) {
+                                    oldDate
+                                } else {
+                                    mergeDateKeepingTime(selectedDay, oldDate)
+                                }
                             } else {
                                 dayOnlyWithTime(
                                     selectedDay,
-                                    preferCurrentTime = selectedDay == startOfDay(System.currentTimeMillis())
+                                    preferCurrentTime =
+                                        selectedDay == startOfDay(System.currentTimeMillis())
                                 )
                             }
 
@@ -226,15 +285,21 @@ fun TransactionEditor(
                                         .sortedByDescending { it.dateMillis }
                                 )
                             }
+
                             onSave(updated)
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text(if (editing) "Save changes" else "Save transaction") }
+            ) {
+                Text(if (editing) "Save changes" else "Save transaction")
+            }
 
             if (editing) {
-                TextButton(onClick = { deleteDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                TextButton(
+                    onClick = { deleteDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Delete transaction", color = MaterialTheme.colorScheme.error)
                 }
             }
@@ -256,7 +321,11 @@ fun TransactionEditor(
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
-                            color = if (option == category) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                            color = if (option == category) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            }
                         ) {
                             Text(option, modifier = Modifier.padding(12.dp))
                         }
@@ -277,16 +346,28 @@ fun TransactionEditor(
                     onClick = {
                         deleteDialog = false
                         val updated = if (existingExpense != null) {
-                            currentData.copy(expenses = currentData.expenses.filterNot { it.id == existingExpense.id })
+                            currentData.copy(
+                                expenses = currentData.expenses.filterNot {
+                                    it.id == existingExpense.id
+                                }
+                            )
                         } else {
-                            currentData.copy(incomes = currentData.incomes.filterNot { it.id == existingIncome!!.id })
+                            currentData.copy(
+                                incomes = currentData.incomes.filterNot {
+                                    it.id == existingIncome!!.id
+                                }
+                            )
                         }
                         onDelete(updated)
                     }
-                ) { Text("Delete") }
+                ) {
+                    Text("Delete")
+                }
             },
             dismissButton = {
-                TextButton(onClick = { deleteDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { deleteDialog = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }
