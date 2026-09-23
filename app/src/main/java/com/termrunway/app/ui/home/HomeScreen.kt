@@ -122,7 +122,7 @@ fun HomeScreen(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         HomeMetric("Income today", formatRupees(incomeToday))
                         HomeMetric(
-                            "Today’s balance",
+                            "Net today",
                             if (dailyLimitCents > 0L) formatSignedRupees(dailyLimitCents - spentToday) else "No limit"
                         )
                     }
