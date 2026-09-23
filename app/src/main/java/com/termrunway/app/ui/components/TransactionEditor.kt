@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.height
 import com.termrunway.app.data.Expense
 import com.termrunway.app.data.ExpenseCategories
 import com.termrunway.app.data.Income
