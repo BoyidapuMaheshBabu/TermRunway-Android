@@ -2,15 +2,13 @@ package com.termrunway.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Material starter colors
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650A4)
-val PurpleGrey40 = Color(0xFF625B71)
-val Pink40 = Color(0xFF7D5260)
-
-// TermRunway semantic colors
-val PrimaryBlue = Color(0xFF2563EB)
-val GrowthGreen = Color(0xFF16A34A)
+val RunwayGreen = Color(0xFF2F6B4F)
+val RunwayGreenDark = Color(0xFF9FD3B4)
+val RunwayGreenContainer = Color(0xFFE3F0E8)
+val RunwayGreenContainerDark = Color(0xFF24543E)
+val RunwayBackground = Color(0xFFF7F8F5)
+val RunwaySurface = Color(0xFFFFFFFF)
+val RunwayText = Color(0xFF172019)
+val RunwayMuted = Color(0xFF667067)
+val RunwayError = Color(0xFFB3261E)
+val RunwayErrorContainer = Color(0xFFFFDAD6)
