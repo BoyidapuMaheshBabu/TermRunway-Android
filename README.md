@@ -1,126 +1,59 @@
 # TermRunway Android 💸
 
-> **A student-focused Android app for planning and understanding money across a semester or selected period.**
+> **A student-focused Android app for understanding everyday money through simple, local-first tracking.**
 
-TermRunway is an offline-first student finance application designed to help students understand available money, planned expenses, income, actual spending, and their financial runway.
+TermRunway Android is being built as an offline-first student finance app. Version 1 focuses completely on the **Daily Tracker**. Term planning and term-flow management are intentionally kept out of the v1 navigation until the Daily Tracker is complete.
 
-This repository contains the **native Android version of TermRunway**, developed from the lessons and product ideas explored in the original web version.
+## Daily Tracker
 
-## ⭐ Highlights
+Daily Tracker answers:
 
-- Student-focused financial planning and tracking
-- **Plan Mode** for forecasting a semester or selected period
-- **Tracking Mode** for recording actual income and expenses
-- Projected and remaining balance calculations
-- Financial insights based on planned or recorded values
-- Native Android mobile experience
-- Offline-first product direction without requiring a mandatory account
-- Practical workflow focused on understanding money rather than banking
+> **What happened?**
 
-## 💡 What It Does
+Students can:
 
-TermRunway is built around two ways of working with student finances.
+- record expenses
+- record income
+- choose an expense category or income source
+- attach an optional note
+- choose today or an earlier date
+- review a day at a time
+- edit or delete transactions
+- set an optional daily spending limit
+- receive small informational spending indications without blocking transactions
 
-| Mode | Main question | Purpose |
-| --- | --- | --- |
-| **Tracking Mode** | What happened? | Record actual income and expenses and understand spending. |
-| **Plan Mode** | What will happen? | Plan money for a semester or selected period using available money, expected income, and planned expenses. |
+The app uses the same underlying transaction data for Home, Track, and Insights.
 
-### Tracking Mode
+## Screens
 
-Tracking Mode focuses on real transactions.
+| Screen | Purpose |
+| --- | --- |
+| **Home** | Quick view of today's spending, income, recent activity, and the next useful action. |
+| **Track** | Detailed day-by-day transaction recording and review. |
+| **Insights** | Understand spending patterns and category totals over selected periods. |
+| **Settings** | Profile, daily limit, theme, backup/restore, and data deletion. |
 
-Students can record information such as:
+## Backup & Restore
 
-- Income
-- Food expenses
-- Transport expenses
-- Accommodation expenses
-- Other spending
+TermRunway can export a complete restoreable JSON backup containing local profile information, expenses, income, and relevant preferences.
 
-The goal is to understand actual spending over time.
-
-> **Record what happened and understand it.**
-
-### Plan Mode
-
-Plan Mode is for students who want to estimate how their money may behave during a future period.
-
-Typical planning inputs include:
-
-- Start and end dates
-- Available money
-- Expected income
-- Planned expenses
-- Expense categories
-
-A basic projection is:
+Backups use a filename such as:
 
 ```text
-Projected Balance
-= Available Money
-+ Expected Income
-- Planned Expenses
+TermRunway_Mahesh_2026-09-23.json
 ```
 
-As the plan changes, the app can use the updated values to show the effect on the student's financial runway.
+Calculated totals and charts are not stored as the source of truth. They are rebuilt from restored transaction data.
 
-> **Plan ahead and understand the financial impact.**
+## Product principles
 
-## 📊 Insights
+- Money values are primary; percentages are not part of the core planning experience.
+- A high-spending day is not automatically treated as a failure.
+- Daily limits are informational and never block a real transaction.
+- Empty states and insufficient-data states are explicit rather than showing fake statistics.
+- User data remains local unless the user deliberately creates or restores a backup.
 
-TermRunway brings the results of planning and tracking into a student-friendly view.
-
-### Tracking Insights
-
-- Actual income and expenses
-- Spending by category
-- Spending over a selected period
-- Income vs. expense information
-- Historical spending patterns
-
-### Planning Insights
-
-- Projected balance
-- Expected income and expenses
-- Planning-period outlook
-- Financial status and warnings
-- Effect of changing planned expenses
-
-The purpose is not to behave like a banking application. It is to help students understand their own financial situation and make practical plans.
-
-## 🧠 What I Learned
-
-TermRunway Android is a practical learning project built by identifying product requirements, learning unfamiliar concepts, implementing them, testing the behavior, and improving the application.
-
-Key areas explored:
-
-- Kotlin and Android development
-- Jetpack Compose UI development
-- Material 3 components and design
-- State-driven UI and user input handling
-- Financial calculations and application logic
-- Validation and edge cases
-- Mobile-first product design
-- Translating a web idea into a native Android application
-- Maintaining and improving a real project
-
-## 🤖 AI-Assisted Development
-
-TermRunway Android was developed with AI assistance.
-
-I use AI as a development and learning tool to:
-
-- explore unfamiliar Android concepts
-- understand implementation options
-- generate or modify code when needed
-- investigate errors
-- iterate on features and UI
-- review and improve the implementation
-
-The project is **not presented as line-by-line manual coding without AI assistance**. The focus is on understanding the product, making implementation decisions, testing the result, and learning from each iteration.
-
-## 🛠️ Technology
+## Technology
 
 - Kotlin
 - Jetpack Compose
@@ -128,94 +61,29 @@ The project is **not presented as line-by-line manual coding without AI assistan
 - Android SDK
 - AndroidX
 - Gradle
-- Git
-- GitHub
-- Android Studio
+- Git and GitHub
 
-## 📁 Project Structure
+## Development approach
 
 ```text
-TermRunway-Android/
-│
-├── app/
-│   └── src/
-│       ├── main/
-│       │   ├── java/
-│       │   │   └── com/termrunway/
-│       │   └── res/
-│       ├── test/
-│       └── androidTest/
-│
-├── build.gradle.kts
-├── settings.gradle.kts
-├── gradle.properties
-└── README.md
-```
-
-The main Android application code is under `app/src/main`, with separate source sets for unit tests and Android instrumentation tests.
-
-## 🔄 Development Approach
-
-The project follows a practical development cycle:
-
-```text
-Understand the problem
-        ↓
-Define requirements
-        ↓
-Design the workflow
-        ↓
-Learn what is needed
-        ↓
-Implement
-        ↓
+Understand
+   ↓
+Design
+   ↓
+Build
+   ↓
 Test
-        ↓
-Debug
-        ↓
+   ↓
+Fix
+   ↓
 Improve
 ```
 
-The Android application is being developed from the product idea itself rather than simply copying the previous web interface screen by screen.
+Term Mode will be implemented separately after the Daily Tracker has been completed and validated.
 
-## 🧪 Testing & Improvements
+## Developer
 
-The project includes Android unit-test and instrumentation-test source sets.
-
-As features are added, the application is tested through:
-
-- build and runtime checks
-- UI behavior checks
-- financial calculation validation
-- input and edge-case testing
-- iterative fixes and refinements
-
-The goal is to keep improving both the product behavior and the implementation quality as the project grows.
-
-## 🔮 Roadmap
-
-Planned improvements may include:
-
-- richer financial insights
-- deeper tracking and planning workflows
-- more detailed spending analysis
-- improved accessibility
-- continued UI and usability refinements
-- stronger testing as the application grows
-
-The roadmap may change as the product develops.
-
-## 🔗 Related Project
-
-Web version: [TermRunway](https://github.com/BoyidapuMaheshBabu/TermRunway)
-
-## 👨‍💻 Developer
-
-**Boyidapu Mahesh Babu**  
-Diploma in Computer Science Engineering student
+**Boyidapu Mahesh Babu**
 
 GitHub: [@BoyidapuMaheshBabu](https://github.com/BoyidapuMaheshBabu)
 
----
-
-**TermRunway — understand your money, plan your runway.**
