@@ -8,3 +8,5 @@ Daily Tracking answers "What happened?".
 Plan Tracking answers "What will happen?" using dates, available money, expected income, expected expenses, live plan math, runway, and plan-vs-actual.
 
 This branch is a clean UI-reference build and intentionally does not reuse the previous screen source tree.
+
+Build validation is handled by .github/workflows/android-build.yml.
