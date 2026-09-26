@@ -1,0 +1,3 @@
+com.termrunway.app
+string app_name
+style Theme_TermRunway
