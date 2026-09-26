@@ -4,8 +4,8 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.enableEdgeToEdge
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,8 +28,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -67,7 +67,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,7 +79,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONArray
@@ -145,11 +144,11 @@ fun TermRunwayApp(){
             settingsOpen->SettingsScreen(state,dark,{dark=it},{settingsOpen=false},{save(state.copy(name=it))},{save(state.copy(dailyLimit=it))})
             else->Scaffold(
                 bottomBar={if(mode==Mode.DAILY)DailyBar(dailyTab){dailyTab=it}else PlanBar(planTab){planTab=it}},
-                floatingActionButton={if(mode==Mode.DAILY&&dailyTab==DailyTab.TRACK)FloatingActionButton({editor=EditorArgs(true)}){Icon(Icons.Outlined.Add,"Add transaction")}}
+                floatingActionButton={if(mode==Mode.DAILY&&dailyTab==DailyTab.TRACK)FloatingActionButton(onClick={editor=EditorArgs(true)}){Icon(Icons.Outlined.Add,"Add transaction")}}
             ){pad->
                 if(mode==Mode.DAILY){
                     when(dailyTab){
-                        DailyTab.HOME->DailyHome(state,pad,{settingsOpen=true},{mode=Mode.PLAN;planTab=PlanTab.OVERVIEW},{dailyTab=DailyTab.TRACK},{dailyTab=DailyTab.INSIGHTS},{editor=EditorArgs(true)},{editor=EditorArgs(false)}, {editor=EditorArgs(true,it)})
+                        DailyTab.HOME->DailyHome(state,pad,{settingsOpen=true},{mode=Mode.PLAN;planTab=PlanTab.OVERVIEW},{dailyTab=DailyTab.TRACK},{dailyTab=DailyTab.INSIGHTS},{editor=EditorArgs(true)},{editor=EditorArgs(false)},{editor=EditorArgs(true,it)})
                         DailyTab.TRACK->DailyTrack(state,pad,{settingsOpen=true},{editor=EditorArgs(true)},{editor=EditorArgs(true,it)},{editor=EditorArgs(false,null,it)})
                         DailyTab.INSIGHTS->DailyInsights(state,pad){settingsOpen=true}
                     }
@@ -162,8 +161,8 @@ fun TermRunwayApp(){
                     }
                 }
             }
-            editor?.let{TransactionSheet(it,state,{editor=null}){save(it);editor=null}}
         }
+        editor?.let{args->TransactionSheet(args,state,{editor=null}){save(it);editor=null}}
     }
 }
 
@@ -290,7 +289,50 @@ private fun SetupScreen(onDone:(String)->Unit){
         item{Header("Plan Tracking","What will happen",onSettings)}
         item{ModeSwitcher(true,onDaily,{})}
         if(plan==null)item{Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=Panel2)){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("Build your first term plan",style=MaterialTheme.typography.headlineSmall);Text("Set dates, money available now, expected income and expected expenses.",color=Muted);Button(onClick={onTab(PlanTab.PLAN)}){Text("Create plan")}}}}
-        else{val m=planSummary(s,plan);item{Card(shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Panel2)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Row(Modifier.fillMaxWidth()){Column(Modifier.weight(1f)){Text("RUNWAY",color=Blue,fontWeight=FontWeight.Bold);Text(money(m.current),style=MaterialTheme.typography.displaySmall,fontWeight=FontWeight.Bold);Text("current balance",color=Muted)}StatusChip(m.status)}LinearProgressIndicator({m.progress},Modifier.fillMaxWidth());Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Metric("Days left",m.daysRemaining.toString(),Modifier.weight(1f));Metric("Safe / day",money(m.safeDay),Modifier.weight(1f))};Text("Projected end "+money(m.projected),fontWeight=FontWeight.SemiBold)}}};item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Metric("Expected income",money(m.expectedIncome),Modifier.weight(1f));Metric("Planned expense",money(m.plannedExpense),Modifier.weight(1f))}};item{Card(shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){Text("Timeline",fontWeight=FontWeight.SemiBold);Text(prettyDate(plan.start)+" → "+prettyDate(plan.end));Text(m.totalDays.toString()+" days · "+money(plan.available)+" available now",color=Muted)}}};item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={onTab(PlanTab.PLAN)},Modifier.weight(1f)){Text("Edit plan")};Button(onClick={onTab(PlanTab.RUNWAY)},Modifier.weight(1f)){Text("Runway")}}}}
+        else{
+            val m=planSummary(s,plan)
+            item{
+                Card(shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Panel2)){
+                    Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+                        Row(Modifier.fillMaxWidth()){
+                            Column(Modifier.weight(1f)){
+                                Text("RUNWAY",color=Blue,fontWeight=FontWeight.Bold)
+                                Text(money(m.current),style=MaterialTheme.typography.displaySmall,fontWeight=FontWeight.Bold)
+                                Text("current balance",color=Muted)
+                            }
+                            StatusChip(m.status)
+                        }
+                        LinearProgressIndicator(progress = { m.progress }, modifier = Modifier.fillMaxWidth())
+                        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                            Metric("Days left",m.daysRemaining.toString(),Modifier.weight(1f))
+                            Metric("Safe / day",money(m.safeDay),Modifier.weight(1f))
+                        }
+                        Text("Projected end "+money(m.projected),fontWeight=FontWeight.SemiBold)
+                    }
+                }
+            }
+            item{
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    Metric("Expected income",money(m.expectedIncome),Modifier.weight(1f))
+                    Metric("Planned expense",money(m.plannedExpense),Modifier.weight(1f))
+                }
+            }
+            item{
+                Card(shape=RoundedCornerShape(22.dp)){
+                    Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+                        Text("Timeline",fontWeight=FontWeight.SemiBold)
+                        Text(prettyDate(plan.start)+" → "+prettyDate(plan.end))
+                        Text(m.totalDays.toString()+" days · "+money(plan.available)+" available now",color=Muted)
+                    }
+                }
+            }
+            item{
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                    OutlinedButton(onClick={onTab(PlanTab.PLAN)},modifier=Modifier.weight(1f)){Text("Edit plan")}
+                    Button(onClick={onTab(PlanTab.RUNWAY)},modifier=Modifier.weight(1f)){Text("Runway")}
+                }
+            }
+        }
     }
 }
 
@@ -311,11 +353,11 @@ private fun planSummary(s:AppState,p:Plan):PlanSummary{
     LazyColumn(contentPadding=PaddingValues(18.dp,p.calculateTopPadding()+10.dp,18.dp,p.calculateBottomPadding()+24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         item{Header("Plan","Shape the term before you live it",onSettings)};item{ModeSwitcher(true,onDaily,{})}
         item{Card(shape=RoundedCornerShape(28.dp),colors=CardDefaults.cardColors(containerColor=if(projected<0)Color(0xFF28131A) else Color(0xFF12352D))){Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){Text("Live plan math",fontWeight=FontWeight.SemiBold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Metric("Available",money(av),Modifier.weight(1f));Metric("Income",money(inc),Modifier.weight(1f));Metric("Expense",money(exp),Modifier.weight(1f))};Text("Projected left "+money(projected),style=MaterialTheme.typography.titleMedium,fontWeight=FontWeight.Bold,color=if(projected<0)Red else Green);Text(if(projected<0)"This plan is not sufficient yet. Reduce expenses or increase income." else totalDays.toString()+" days · planned pace "+money(if(totalDays>0)exp/totalDays else 0)+" per day",color=Muted)}}}
-        item{Text("Term dates",fontWeight=FontWeight.SemiBold)};item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={pickDate(context,start){start=it}},Modifier.weight(1f)){Text("From\n"+prettyDate(start))};OutlinedButton(onClick={pickDate(context,end){end=it}},Modifier.weight(1f)){Text("Until\n"+prettyDate(end))}}}
+        item{Text("Term dates",fontWeight=FontWeight.SemiBold)};item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={pickDate(context,start){start=it}},modifier=Modifier.weight(1f)){Text("From\n"+prettyDate(start))};OutlinedButton(onClick={pickDate(context,end){end=it}},modifier=Modifier.weight(1f)){Text("Until\n"+prettyDate(end))}}}
         item{Text("Money available now",fontWeight=FontWeight.SemiBold)};item{MoneyField(available,{available=it},"Available money")}
         item{Text("Expected income",fontWeight=FontWeight.SemiBold)};item{MoneyField(expectedIncome,{expectedIncome=it},"Parent + scholarship + work")}
         item{Text("Expected expenses",fontWeight=FontWeight.SemiBold)};item{MoneyField(expectedExpense,{expectedExpense=it},"Total planned expenses")}
-        item{Button(enabled=end>=start,onClick={onSave(Plan(start,end,av,inc,exp))},Modifier.fillMaxWidth()){Text(if(existing==null)"Save term plan" else "Update term plan")}}
+        item{Button(enabled=end>=start,onClick={onSave(Plan(start,end,av,inc,exp))},modifier=Modifier.fillMaxWidth()){Text(if(existing==null)"Save term plan" else "Update term plan")}}
         item{Text("Everything stays on this device. No account or network is used.",style=MaterialTheme.typography.labelMedium,color=Muted)}
     }
 }
@@ -323,7 +365,7 @@ private fun planSummary(s:AppState,p:Plan):PlanSummary{
 @Composable private fun Runway(s:AppState,p:PaddingValues,onSettings:()->Unit){
     LazyColumn(contentPadding=PaddingValues(18.dp,p.calculateTopPadding()+10.dp,18.dp,p.calculateBottomPadding()+24.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
         item{Header("Runway","What your current pace means",onSettings)}
-        if(s.plan==null)item{EmptyState("No term plan yet","Create a plan and Runway turns it into a live forecast.")} else {val m=planSummary(s,s.plan);item{Card(shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Panel2)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("RUNWAY",color=Blue,fontWeight=FontWeight.Bold);Text(money(m.current),style=MaterialTheme.typography.displaySmall,fontWeight=FontWeight.Bold);Text("current balance",color=Muted);LinearProgressIndicator({m.progress},Modifier.fillMaxWidth());Text(m.daysRemaining.toString()+" days remaining",fontWeight=FontWeight.SemiBold)}}};item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Metric("Safe / day",money(m.safeDay),Modifier.weight(1f));Metric("Planned / day",money(m.plannedExpense/m.totalDays.coerceAtLeast(1)),Modifier.weight(1f))}};item{Card(shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Text("Runway outlook",fontWeight=FontWeight.SemiBold);Text(when(m.status){"Needs work"->"Your plan does not fully cover expected spending.";"Above plan"->"Actual spending is running ahead of the plan-to-date pace.";else->"Your current pace is inside the plan."});Text("Projected end "+money(m.projected),color=if(m.projected<0)Red else Green,fontWeight=FontWeight.SemiBold)}}}}
+        if(s.plan==null)item{EmptyState("No term plan yet","Create a plan and Runway turns it into a live forecast.")} else {val m=planSummary(s,s.plan);item{Card(shape=RoundedCornerShape(30.dp),colors=CardDefaults.cardColors(containerColor=Panel2)){Column(Modifier.padding(22.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){Text("RUNWAY",color=Blue,fontWeight=FontWeight.Bold);Text(money(m.current),style=MaterialTheme.typography.displaySmall,fontWeight=FontWeight.Bold);Text("current balance",color=Muted);LinearProgressIndicator(progress = { m.progress }, modifier = Modifier.fillMaxWidth());Text(m.daysRemaining.toString()+" days remaining",fontWeight=FontWeight.SemiBold)}}};item{Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Metric("Safe / day",money(m.safeDay),Modifier.weight(1f));Metric("Planned / day",money(m.plannedExpense/m.totalDays.coerceAtLeast(1)),Modifier.weight(1f))}};item{Card(shape=RoundedCornerShape(22.dp)){Column(Modifier.padding(18.dp),verticalArrangement=Arrangement.spacedBy(7.dp)){Text("Runway outlook",fontWeight=FontWeight.SemiBold);Text(when(m.status){"Needs work"->"Your plan does not fully cover expected spending.";"Above plan"->"Actual spending is running ahead of the plan-to-date pace.";else->"Your current pace is inside the plan."});Text("Projected end "+money(m.projected),color=if(m.projected<0)Red else Green,fontWeight=FontWeight.SemiBold)}}}}
     }
 }
 
@@ -361,7 +403,7 @@ private fun planSummary(s:AppState,p:Plan):PlanSummary{
     ){
         Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){
             Icon(Icons.Outlined.Add,null,tint=Blue)
-            Text(title,fontWeight=FontWeight.SemiBold,Modifier.padding(start=8.dp))
+            Text(title,fontWeight=FontWeight.SemiBold,modifier=Modifier.padding(start=8.dp))
         }
     }
 }
@@ -369,7 +411,7 @@ private fun planSummary(s:AppState,p:Plan):PlanSummary{
 @Composable private fun EmptyState(title:String,description:String,action:String?=null,onAction:(()->Unit)?=null){
     Column(Modifier.fillMaxWidth().padding(24.dp),horizontalAlignment=Alignment.CenterHorizontally){
         Text(title,style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.SemiBold)
-        Text(description,color=Muted,Modifier.padding(top=6.dp))
+        Text(description,color=Muted,modifier=Modifier.padding(top=6.dp))
         if(action!=null&&onAction!=null) TextButton(onClick=onAction){Text(action)}
     }
 }
@@ -378,7 +420,7 @@ private fun planSummary(s:AppState,p:Plan):PlanSummary{
 @Composable private fun CategoryBar(label:String,value:Long,maxValue:Long){Column(verticalArrangement=Arrangement.spacedBy(5.dp)){Row(Modifier.fillMaxWidth()){Text(label,Modifier.weight(1f));Text(money(value),fontWeight=FontWeight.SemiBold)};LinearProgressIndicator({(value.toFloat()/maxValue.coerceAtLeast(1)).coerceIn(0f,1f)},Modifier.fillMaxWidth())}}
 @Composable private fun PlanCompare(label:String,planned:Long,actual:Long){val maxValue=max(planned,actual).coerceAtLeast(1);val diff=actual-planned;Card(shape=RoundedCornerShape(20.dp)){Column(Modifier.padding(16.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){Row(Modifier.fillMaxWidth()){Text(label,Modifier.weight(1f),fontWeight=FontWeight.SemiBold);Text(money(actual))};LinearProgressIndicator({(actual.toDouble()/maxValue).toFloat().coerceIn(0f,1f)},Modifier.fillMaxWidth());Text(if(diff>0)money(diff)+" over" else money(-diff)+" under",color=if(diff>0)Red else Green,style=MaterialTheme.typography.labelMedium)}}}
 @Composable private fun StatusChip(status:String){FilterChip(false,{},label={Text(status)})}
-@Composable private fun MoneyField(value:String,onValue:(String)->Unit,label:String){OutlinedTextField(value,onValue,Modifier.fillMaxWidth(),label={Text(label+" (₹)")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),singleLine=true)}
+@Composable private fun MoneyField(value:String,onValue:(String)->Unit,label:String){OutlinedTextField(value,onValue,Modifier.fillMaxWidth(),label={Text("$label (₹)")},keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal),singleLine=true)}
 
 private fun loadState(c:Context):AppState=runCatching{val raw=c.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getString(KEY,null)?:return AppState();decode(JSONObject(raw))}.getOrDefault(AppState())
 private fun saveState(c:Context,s:AppState){c.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit().putString(KEY,encode(s).toString()).apply()}
