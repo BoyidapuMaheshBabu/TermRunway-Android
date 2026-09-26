@@ -226,10 +226,12 @@ fun TermPlanScreen(
     val projected = totalFunds - expenseTotal
     val days = ((startOfDay(endDate) - startOfDay(startDate)) / DAY_MILLIS).toInt() + 1
 
+    val context = LocalContext.current
+
     fun pickDate(current: Long, onPicked: (Long) -> Unit) {
         val initial = Calendar.getInstance().apply { timeInMillis = current }
         DatePickerDialog(
-            LocalContext.current,
+            context,
             { _, year, month, day ->
                 val chosen = Calendar.getInstance().apply {
                     set(year, month, day, 12, 0, 0)
