@@ -31,10 +31,16 @@ import com.termrunway.app.ui.components.EditorRequest
 import com.termrunway.app.ui.components.TransactionEditor
 import com.termrunway.app.ui.navigation.MainBottomBar
 import com.termrunway.app.ui.navigation.MainTab
+import com.termrunway.app.ui.navigation.TermBottomBar
+import com.termrunway.app.ui.navigation.TermTab
 import com.termrunway.app.ui.screens.HomeScreen
 import com.termrunway.app.ui.screens.InsightsScreen
 import com.termrunway.app.ui.screens.SettingsScreen
 import com.termrunway.app.ui.screens.SetupScreen
+import com.termrunway.app.ui.screens.TermInsightsScreen
+import com.termrunway.app.ui.screens.TermOverviewScreen
+import com.termrunway.app.ui.screens.TermPlanScreen
+import com.termrunway.app.ui.screens.TermRunwayScreen
 import com.termrunway.app.ui.screens.TrackScreen
 import com.termrunway.app.ui.theme.TermRunwayTheme
 import com.termrunway.app.util.startOfDay
@@ -46,6 +52,8 @@ fun TermRunwayApp() {
 
     var data by remember { mutableStateOf(repository.load()) }
     var selectedTabName by rememberSaveable { mutableStateOf(MainTab.HOME.name) }
+    var termTabName by rememberSaveable { mutableStateOf(TermTab.OVERVIEW.name) }
+    var planMode by rememberSaveable { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var editorRequest by remember { mutableStateOf<EditorRequest?>(null) }
     var restoreData by remember { mutableStateOf<AppData?>(null) }
@@ -120,7 +128,7 @@ fun TermRunwayApp() {
                         persist(data.copy(username = name), "Profile updated.")
                     },
                     onSaveDailyLimit = { cents ->
-                        persist(data.copy(dailyLimitCents = cents), "Daily limit updated.")
+                        persist(data.copy(dailyLimitCents = cents), "Daily reference updated.")
                     },
                     onThemeChange = { theme ->
                         persist(data.copy(theme = theme), "Theme updated.")
@@ -133,9 +141,66 @@ fun TermRunwayApp() {
                 )
             }
 
+            planMode -> {
+                val selectedTermTab = TermTab.valueOf(termTabName)
+                Scaffold(
+                    modifier = Modifier.fillMaxSize(),
+                    snackbarHost = { SnackbarHost(snackbarHost) },
+                    bottomBar = {
+                        TermBottomBar(
+                            selectedTab = selectedTermTab,
+                            onTabSelected = { termTabName = it.name }
+                        )
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(
+                            onClick = {
+                                editorRequest = EditorRequest(
+                                    kind = EditorRequest.Kind.EXPENSE,
+                                    defaultDateMillis = startOfDay(System.currentTimeMillis())
+                                )
+                            }
+                        ) {
+                            Icon(Icons.Outlined.Add, contentDescription = "Record expense")
+                        }
+                    }
+                ) { padding ->
+                    when (selectedTermTab) {
+                        TermTab.OVERVIEW -> TermOverviewScreen(
+                            data = data,
+                            contentPadding = padding,
+                            onSettings = { settingsOpen = true },
+                            onModeChange = { planMode = it },
+                            onOpenTab = { termTabName = it.name }
+                        )
+                        TermTab.PLAN -> TermPlanScreen(
+                            data = data,
+                            contentPadding = padding,
+                            onSettings = { settingsOpen = true },
+                            onModeChange = { planMode = it },
+                            onSave = { plan ->
+                                persist(data.copy(termPlan = plan), "Term plan saved.")
+                                termTabName = TermTab.OVERVIEW.name
+                            }
+                        )
+                        TermTab.RUNWAY -> TermRunwayScreen(
+                            data = data,
+                            contentPadding = padding,
+                            onSettings = { settingsOpen = true },
+                            onModeChange = { planMode = it }
+                        )
+                        TermTab.INSIGHTS -> TermInsightsScreen(
+                            data = data,
+                            contentPadding = padding,
+                            onSettings = { settingsOpen = true },
+                            onModeChange = { planMode = it }
+                        )
+                    }
+                }
+            }
+
             else -> {
                 val selectedTab = MainTab.valueOf(selectedTabName)
-
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     snackbarHost = { SnackbarHost(snackbarHost) },
@@ -155,10 +220,7 @@ fun TermRunwayApp() {
                                     )
                                 }
                             ) {
-                                Icon(
-                                    Icons.Outlined.Add,
-                                    contentDescription = "Add transaction"
-                                )
+                                Icon(Icons.Outlined.Add, contentDescription = "Add transaction")
                             }
                         }
                     }
@@ -168,12 +230,9 @@ fun TermRunwayApp() {
                             data = data,
                             contentPadding = padding,
                             onSettings = { settingsOpen = true },
-                            onOpenTrack = {
-                                selectedTabName = MainTab.TRACK.name
-                            },
-                            onOpenInsights = {
-                                selectedTabName = MainTab.INSIGHTS.name
-                            },
+                            onModeChange = { planMode = it },
+                            onOpenTrack = { selectedTabName = MainTab.TRACK.name },
+                            onOpenInsights = { selectedTabName = MainTab.INSIGHTS.name },
                             onAddExpense = {
                                 editorRequest = EditorRequest(
                                     kind = EditorRequest.Kind.EXPENSE,
@@ -242,14 +301,10 @@ fun TermRunwayApp() {
                             restoreData = null
                             persist(restored, "Backup restored.")
                         }
-                    ) {
-                        Text("Restore")
-                    }
+                    ) { Text("Restore") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { restoreData = null }) {
-                        Text("Cancel")
-                    }
+                    TextButton(onClick = { restoreData = null }) { Text("Cancel") }
                 }
             )
         }
@@ -260,7 +315,7 @@ fun TermRunwayApp() {
                 title = { Text("Delete all local data?") },
                 text = {
                     Text(
-                        "This removes transactions, name, limit, and theme from this phone. " +
+                        "This removes transactions, name, limit, theme, and term plan from this phone. " +
                             "A backup is the only way to recover it."
                     )
                 },
@@ -270,14 +325,10 @@ fun TermRunwayApp() {
                             deleteAllPending = false
                             persist(AppData(), "All local data deleted.")
                         }
-                    ) {
-                        Text("Delete all")
-                    }
+                    ) { Text("Delete all") }
                 },
                 dismissButton = {
-                    TextButton(onClick = { deleteAllPending = false }) {
-                        Text("Cancel")
-                    }
+                    TextButton(onClick = { deleteAllPending = false }) { Text("Cancel") }
                 }
             )
         }

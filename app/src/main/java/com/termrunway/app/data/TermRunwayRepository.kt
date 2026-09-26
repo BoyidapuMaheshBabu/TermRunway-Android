@@ -75,6 +75,34 @@ class TermRunwayRepository(context: Context) {
             )
         }
 
+        val expectedIncome = JSONArray()
+        data.termPlan?.expectedIncome?.forEach {
+            expectedIncome.put(
+                JSONObject()
+                    .put("id", it.id)
+                    .put("source", it.source)
+                    .put("amountCents", it.amountCents)
+            )
+        }
+
+        val plannedExpenses = JSONArray()
+        data.termPlan?.plannedExpenses?.forEach {
+            plannedExpenses.put(
+                JSONObject()
+                    .put("category", it.category)
+                    .put("amountCents", it.amountCents)
+            )
+        }
+
+        val termPlan = data.termPlan?.let {
+            JSONObject()
+                .put("startDateMillis", it.startDateMillis)
+                .put("endDateMillis", it.endDateMillis)
+                .put("availableMoneyCents", it.availableMoneyCents)
+                .put("expectedIncome", expectedIncome)
+                .put("plannedExpenses", plannedExpenses)
+        }
+
         return JSONObject()
             .put("format", FORMAT)
             .put("version", VERSION)
@@ -88,11 +116,13 @@ class TermRunwayRepository(context: Context) {
             )
             .put("expenses", expenses)
             .put("incomes", incomes)
+            .put("termPlan", termPlan)
     }
 
     private fun decode(root: JSONObject): Pair<AppData, Long> {
         require(root.optString("format") == FORMAT) { "Not a TermRunway backup." }
-        require(root.optInt("version", -1) == VERSION) { "Unsupported TermRunway backup version." }
+        val version = root.optInt("version", -1)
+        require(version in 1..VERSION) { "Unsupported TermRunway backup version." }
 
         val profile = root.optJSONObject("profile") ?: JSONObject()
         val username = profile.optString("username").trim().take(MAX_USERNAME_LENGTH)
@@ -100,18 +130,55 @@ class TermRunwayRepository(context: Context) {
         require(dailyLimitCents >= 0L) { "Invalid daily limit." }
 
         val theme = runCatching {
-            ThemeMode.valueOf(profile.optString("theme", ThemeMode.SYSTEM.name))
-        }.getOrElse { ThemeMode.SYSTEM }
+            ThemeMode.valueOf(profile.optString("theme", ThemeMode.DARK.name))
+        }.getOrElse { ThemeMode.DARK }
+
+        val termPlan = if (version >= 2) decodeTermPlan(root.optJSONObject("termPlan")) else null
 
         val data = AppData(
             username = username,
             dailyLimitCents = dailyLimitCents,
             theme = theme,
             expenses = decodeExpenses(root.optJSONArray("expenses") ?: JSONArray()),
-            incomes = decodeIncomes(root.optJSONArray("incomes") ?: JSONArray())
+            incomes = decodeIncomes(root.optJSONArray("incomes") ?: JSONArray()),
+            termPlan = termPlan
         )
         validate(data)
         return data to root.optLong("createdAtMillis", 0L)
+    }
+
+    private fun decodeTermPlan(root: JSONObject?): TermPlan? {
+        if (root == null) return null
+        val expected = root.optJSONArray("expectedIncome") ?: JSONArray()
+        val planned = root.optJSONArray("plannedExpenses") ?: JSONArray()
+        val expectedList = buildList {
+            for (index in 0 until expected.length()) {
+                val item = expected.optJSONObject(index) ?: continue
+                val source = item.optString("source").trim().take(MAX_SOURCE_LENGTH)
+                val amount = item.optLong("amountCents", -1L)
+                val id = item.optString("id").trim().ifBlank { UUID.randomUUID().toString() }
+                if (source.isNotBlank() && amount > 0L) {
+                    add(ExpectedIncome(id, source, amount))
+                }
+            }
+        }
+        val plannedList = buildList {
+            for (index in 0 until planned.length()) {
+                val item = planned.optJSONObject(index) ?: continue
+                val category = item.optString("category").trim().take(MAX_CATEGORY_LENGTH)
+                val amount = item.optLong("amountCents", -1L)
+                if (category.isNotBlank() && amount > 0L) {
+                    add(PlannedExpense(category, amount))
+                }
+            }
+        }
+        return TermPlan(
+            startDateMillis = root.optLong("startDateMillis", -1L),
+            endDateMillis = root.optLong("endDateMillis", -1L),
+            availableMoneyCents = root.optLong("availableMoneyCents", -1L),
+            expectedIncome = expectedList,
+            plannedExpenses = plannedList
+        )
     }
 
     private fun decodeExpenses(array: JSONArray): List<Expense> {
@@ -155,13 +222,25 @@ class TermRunwayRepository(context: Context) {
         require(data.incomes.all { it.amountCents > 0L && it.source.isNotBlank() && it.dateMillis > 0L && it.note.length <= MAX_NOTE_LENGTH })
         require(data.expenses.map { it.id }.distinct().size == data.expenses.size)
         require(data.incomes.map { it.id }.distinct().size == data.incomes.size)
+
+        data.termPlan?.let { plan ->
+            require(plan.startDateMillis > 0L)
+            require(plan.endDateMillis >= plan.startDateMillis)
+            require(plan.availableMoneyCents >= 0L)
+            require(plan.expectedIncome.all { it.source.isNotBlank() && it.source.length <= MAX_SOURCE_LENGTH && it.amountCents > 0L })
+            require(plan.plannedExpenses.all { it.category.isNotBlank() && it.category.length <= MAX_CATEGORY_LENGTH && it.amountCents > 0L })
+            require(plan.expectedIncome.map { it.id }.distinct().size == plan.expectedIncome.size)
+            require(plan.plannedExpenses.map { it.category }.distinct().size == plan.plannedExpenses.size)
+        }
     }
 
     private companion object {
         const val FILE_NAME = "termrunway_data.json"
         const val FORMAT = "termrunway-backup"
-        const val VERSION = 1
+        const val VERSION = 2
         const val MAX_USERNAME_LENGTH = 32
         const val MAX_NOTE_LENGTH = 120
+        const val MAX_SOURCE_LENGTH = 50
+        const val MAX_CATEGORY_LENGTH = 80
     }
 }

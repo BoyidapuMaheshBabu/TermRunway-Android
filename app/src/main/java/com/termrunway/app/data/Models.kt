@@ -18,14 +18,34 @@ data class Income(
     val note: String = ""
 )
 
+data class ExpectedIncome(
+    val id: String = UUID.randomUUID().toString(),
+    val source: String,
+    val amountCents: Long
+)
+
+data class PlannedExpense(
+    val category: String,
+    val amountCents: Long
+)
+
+data class TermPlan(
+    val startDateMillis: Long,
+    val endDateMillis: Long,
+    val availableMoneyCents: Long,
+    val expectedIncome: List<ExpectedIncome> = emptyList(),
+    val plannedExpenses: List<PlannedExpense> = emptyList()
+)
+
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 data class AppData(
     val username: String = "",
     val dailyLimitCents: Long = 0L,
-    val theme: ThemeMode = ThemeMode.SYSTEM,
+    val theme: ThemeMode = ThemeMode.DARK,
     val expenses: List<Expense> = emptyList(),
-    val incomes: List<Income> = emptyList()
+    val incomes: List<Income> = emptyList(),
+    val termPlan: TermPlan? = null
 )
 
 object ExpenseCategories {

@@ -7,31 +7,40 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val LightColors = lightColorScheme(
-    primary = GreenPrimary,
+    primary = BluePrimaryLight,
     onPrimary = androidx.compose.ui.graphics.Color.White,
-    primaryContainer = GreenContainer,
+    primaryContainer = BlueContainerLight,
     onPrimaryContainer = Ink,
+    secondary = GreenSuccess,
     background = CanvasLight,
     onBackground = Ink,
-    surface = androidx.compose.ui.graphics.Color.White,
+    surface = SurfaceLight,
     onSurface = Ink,
     surfaceVariant = SurfaceVariantLight,
     onSurfaceVariant = Muted,
-    outline = OutlineLight
+    outline = OutlineLight,
+    error = RedWarning
 )
 
 private val DarkColors = darkColorScheme(
-    primary = GreenPrimaryDark,
+    primary = BluePrimary,
     onPrimary = Ink,
-    primaryContainer = GreenContainerDark,
+    primaryContainer = BlueContainer,
     onPrimaryContainer = androidx.compose.ui.graphics.Color.White,
+    secondary = GreenSuccess,
+    onSecondary = Ink,
+    secondaryContainer = GreenSuccessContainer,
+    onSecondaryContainer = androidx.compose.ui.graphics.Color.White,
     background = CanvasDark,
     onBackground = androidx.compose.ui.graphics.Color.White,
     surface = SurfaceDark,
     onSurface = androidx.compose.ui.graphics.Color.White,
     surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = androidx.compose.ui.graphics.Color(0xFFB6C2BD),
-    outline = OutlineDark
+    onSurfaceVariant = androidx.compose.ui.graphics.Color(0xFFA6B8CA),
+    outline = OutlineDark,
+    error = RedWarning,
+    errorContainer = RedWarningContainer,
+    onErrorContainer = androidx.compose.ui.graphics.Color.White
 )
 
 @Composable

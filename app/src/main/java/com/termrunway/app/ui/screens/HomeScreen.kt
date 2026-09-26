@@ -1,13 +1,17 @@
 package com.termrunway.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,10 +36,12 @@ import com.termrunway.app.data.AppData
 import com.termrunway.app.domain.dailyTotals
 import com.termrunway.app.ui.components.EditorRequest
 import com.termrunway.app.ui.components.EmptyState
+import com.termrunway.app.ui.components.ModeSwitcher
 import com.termrunway.app.ui.components.MetricCard
 import com.termrunway.app.ui.components.QuickActionCard
 import com.termrunway.app.ui.components.TransactionItem
 import com.termrunway.app.ui.components.TransactionRow
+import com.termrunway.app.util.addDays
 import com.termrunway.app.util.formatDay
 import com.termrunway.app.util.formatRupees
 import com.termrunway.app.util.formatSignedRupees
@@ -46,6 +52,7 @@ fun HomeScreen(
     data: AppData,
     contentPadding: PaddingValues,
     onSettings: () -> Unit,
+    onModeChange: (Boolean) -> Unit,
     onOpenTrack: () -> Unit,
     onOpenInsights: () -> Unit,
     onAddExpense: () -> Unit,
@@ -61,13 +68,20 @@ fun HomeScreen(
         data.incomes.forEach {
             add(TransactionItem(it.id, it.source, formatDay(it.dateMillis) + " · income", it.amountCents, true, income = it))
         }
-    }.sortedByDescending { item -> item.expense?.dateMillis ?: item.income?.dateMillis ?: 0L }.take(6)
+    }.sortedByDescending { item -> item.expense?.dateMillis ?: item.income?.dateMillis ?: 0L }.take(5)
+
+    val pulseDays = (0..6).map { addDays(today, -it) }.reversed()
+    val pulse = pulseDays.map { day ->
+        val dayTotals = dailyTotals(data.expenses, data.incomes, day)
+        Pair(dayTotals.spentCents, dayTotals.incomeCents)
+    }
+    val maxPulse = pulse.flatMap { listOf(it.first, it.second) }.maxOrNull()?.coerceAtLeast(1L) ?: 1L
 
     LazyColumn(
         contentPadding = PaddingValues(
-            start = 16.dp,
-            end = 16.dp,
-            top = contentPadding.calculateTopPadding() + 12.dp,
+            start = 18.dp,
+            end = 18.dp,
+            top = contentPadding.calculateTopPadding() + 10.dp,
             bottom = contentPadding.calculateBottomPadding() + 24.dp
         ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -75,8 +89,8 @@ fun HomeScreen(
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("TermRunway", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text("Daily money tracker", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("TERM RUNWAY", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("Private • Offline", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(onClick = onSettings) {
                     Icon(Icons.Outlined.Settings, contentDescription = "Settings")
@@ -85,39 +99,53 @@ fun HomeScreen(
         }
 
         item {
+            ModeSwitcher(planSelected = false, onSelectPlan = onModeChange)
+        }
+
+        item {
             Column {
-                Text("Hi, ${data.username} 👋", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Good to see you, " + data.username, style = MaterialTheme.typography.headlineSmall)
                 Text(formatDay(today), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
         item {
             ElevatedCard(
-                onClick = onOpenTrack,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(26.dp),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("TODAY", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                    Text(formatRupees(totals.spentCents), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("TODAY", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.weight(1f))
+                        Text("ACTUAL", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text(formatRupees(totals.spentCents), style = MaterialTheme.typography.displaySmall)
                     Text("spent today", color = MaterialTheme.colorScheme.onSurfaceVariant)
+
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         MetricCard("Income", formatRupees(totals.incomeCents), Modifier.weight(1f))
                         MetricCard("Net", formatSignedRupees(totals.netCents), Modifier.weight(1f))
                     }
+
                     if (data.dailyLimitCents > 0L) {
                         val remaining = data.dailyLimitCents - totals.spentCents
                         val ratio = (totals.spentCents.toDouble() / data.dailyLimitCents.toDouble()).toFloat().coerceIn(0f, 1f)
                         LinearProgressIndicator(progress = { ratio }, modifier = Modifier.fillMaxWidth())
                         Text(
-                            if (remaining >= 0L) "${formatRupees(remaining)} left of your daily limit"
-                            else "${formatRupees(-remaining)} above your daily limit",
-                            color = if (remaining < 0L) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.labelMedium
+                            if (remaining >= 0L) {
+                                formatRupees(remaining) + " left of daily reference"
+                            } else {
+                                formatRupees(-remaining) + " above daily reference"
+                            },
+                            color = if (remaining < 0L) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
-                        Text("Set a daily limit in Settings for an optional spending reference.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "No daily limit is required in Tracking Mode.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -125,13 +153,21 @@ fun HomeScreen(
 
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                shape = RoundedCornerShape(18.dp)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(22.dp)
             ) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.size(10.dp))
-                    Text("Tracking records what actually happened. It never blocks a transaction.", style = MaterialTheme.typography.bodyMedium)
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(8.dp))
+                        Column {
+                            Text("No pressure", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Tracking records what actually happened. Nothing is blocked.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -140,6 +176,50 @@ fun HomeScreen(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 QuickActionCard("Add expense", Modifier.weight(1f), onAddExpense)
                 QuickActionCard("Add income", Modifier.weight(1f), onAddIncome)
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth()) {
+                        Column(Modifier.weight(1f)) {
+                            Text("7-day pulse", fontWeight = FontWeight.SemiBold)
+                            Text("Spending vs income", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(88.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        pulse.forEachIndexed { index, value ->
+                            Row(
+                                modifier = Modifier.weight(1f),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                val expenseHeight = (value.first.toDouble() / maxPulse.toDouble() * 70.0).toFloat().coerceAtLeast(if (value.first > 0) 6f else 2f)
+                                val incomeHeight = (value.second.toDouble() / maxPulse.toDouble() * 70.0).toFloat().coerceAtLeast(if (value.second > 0) 6f else 2f)
+                                Box(
+                                    Modifier.width(7.dp).height(expenseHeight.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                                )
+                                Spacer(Modifier.width(3.dp))
+                                Box(
+                                    Modifier.width(7.dp).height(incomeHeight.dp).background(MaterialTheme.colorScheme.secondary, RoundedCornerShape(8.dp))
+                                )
+                            }
+                        }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Expense", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text("Income", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
             }
         }
 
@@ -154,11 +234,11 @@ fun HomeScreen(
             item {
                 EmptyState(
                     title = "Nothing recorded yet",
-                    description = "Add your first expense or income to start building your real spending history."
+                    description = "Add your first expense or income to start building your real history."
                 )
             }
         } else {
-            items(recent, key = { item -> item.id + if (item.isIncome) "-i" else "-e" }) { item ->
+            items(recent, key = { it.id + if (it.isIncome) "-i" else "-e" }) { item ->
                 TransactionRow(item) {
                     onEdit(
                         if (item.isIncome) {

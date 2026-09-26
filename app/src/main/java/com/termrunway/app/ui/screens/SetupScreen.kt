@@ -10,7 +10,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,14 +22,26 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SetupScreen(onComplete: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier.fillMaxSize().imePadding().padding(24.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Welcome to TermRunway", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(
-            "Track what happened with your money. Plan mode will come later.",
-            modifier = Modifier.padding(top = 8.dp),
+            "TermRunway",
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            "PLAN • CALCULATE • ACHIEVE",
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(top = 6.dp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            "Your private, offline money companion for everyday tracking and semester planning.",
+            modifier = Modifier.padding(top = 16.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         OutlinedTextField(
@@ -44,9 +55,8 @@ fun SetupScreen(onComplete: (String) -> Unit) {
             enabled = name.trim().isNotEmpty(),
             onClick = { onComplete(name.trim()) },
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
-        ) { Text("Start tracking") }
-        TextButton(onClick = { onComplete("Student") }, modifier = Modifier.fillMaxWidth()) {
-            Text("Use Student for now")
+        ) {
+            Text("Enter TermRunway")
         }
     }
 }
