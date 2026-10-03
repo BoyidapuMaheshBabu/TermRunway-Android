@@ -311,9 +311,14 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
                 }
             }
         }
-    ) {
-        when (tab) {
-            RootTab.HOME -> HomeScreen(
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            when (tab) {
+                RootTab.HOME -> HomeScreen(
                 state = state,
                 planMode = planMode,
                 onPlanMode = { planMode = it },
@@ -339,7 +344,8 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
                     transactionOpen = true
                 }
             )
-            RootTab.INSIGHTS -> InsightsScreen(state)
+                RootTab.INSIGHTS -> InsightsScreen(state)
+            }
         }
     }
 }
