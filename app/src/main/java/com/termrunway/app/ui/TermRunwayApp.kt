@@ -147,7 +147,7 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
         }
     }
 
-    if (!state.preferencesLoaded) {
+    if (!state.preferencesLoaded || !state.dataLoaded) {
         StartupScreen()
         return
     }
