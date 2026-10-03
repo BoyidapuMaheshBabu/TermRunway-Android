@@ -888,7 +888,8 @@ private fun InsightsScreen(
 
 private data class MoneyPulsePoint(
     val label: String,
-    val amountPaise: Long
+    val incomePaise: Long,
+    val expensePaise: Long
 )
 
 @Composable
@@ -903,7 +904,8 @@ private fun MoneyPulseChart(
             val day = addDays(startMs, offset)
             MoneyPulsePoint(
                 label = if (offset == rawDays - 1) "Today" else java.text.SimpleDateFormat("dd MMM", Locale.getDefault()).format(java.util.Date(day)),
-                amountPaise = FinancialCalculator.dayExpense(transactions, day)
+                incomePaise = FinancialCalculator.dayIncome(transactions, day),
+                expensePaise = FinancialCalculator.dayExpense(transactions, day)
             )
         }
     } else {
@@ -913,33 +915,45 @@ private fun MoneyPulseChart(
             val length = minOf(7, rawDays - week * 7)
             MoneyPulsePoint(
                 label = java.text.SimpleDateFormat("dd MMM", Locale.getDefault()).format(java.util.Date(weekStart)),
-                amountPaise = (0 until length).sumOf { offset ->
+                incomePaise = (0 until length).sumOf { offset ->
+                    FinancialCalculator.dayIncome(transactions, addDays(weekStart, offset))
+                },
+                expensePaise = (0 until length).sumOf { offset ->
                     FinancialCalculator.dayExpense(transactions, addDays(weekStart, offset))
                 }
             )
         }
     }
 
-    val totalPaise = points.sumOf { it.amountPaise }
-    val highest = points.maxByOrNull { it.amountPaise }
-    val highestPaise = highest?.amountPaise ?: 0L
-    val averagePaise = totalPaise / rawDays.toLong().coerceAtLeast(1L)
+    val totalIncomePaise = points.sumOf { it.incomePaise }
+    val totalExpensePaise = points.sumOf { it.expensePaise }
+    val highestPaise = points.maxOfOrNull { maxOf(it.incomePaise, it.expensePaise) } ?: 0L
+    val highestPoint = points.maxByOrNull { maxOf(it.incomePaise, it.expensePaise) }
+    val averageIncomePaise = totalIncomePaise / rawDays.toLong().coerceAtLeast(1L)
+    val averageExpensePaise = totalExpensePaise / rawDays.toLong().coerceAtLeast(1L)
     val chartMaxPaise = highestPaise.coerceAtLeast(1L)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            if (rawDays == 7) "Actual expenses · each bar is one day" else "Actual expenses · grouped by week for readability",
+            if (rawDays == 7) "Actual cash flow · each pair is one day" else "Actual cash flow · grouped by week for readability",
             style = MaterialTheme.typography.bodySmall,
             color = RunwayMuted
         )
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MoneyPulseSummary("Total", totalPaise, Modifier.weight(1f))
-            MoneyPulseSummary("Highest", highestPaise, Modifier.weight(1f))
-            MoneyPulseSummary("Avg / day", averagePaise, Modifier.weight(1f))
+            MoneyPulseSummary("Income", totalIncomePaise, Modifier.weight(1f))
+            MoneyPulseSummary("Spent", totalExpensePaise, Modifier.weight(1f))
+            MoneyPulseSummary("Net", totalIncomePaise - totalExpensePaise, Modifier.weight(1f))
         }
 
-        if (totalPaise == 0L) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                MoneyPulseLegend("Income", RunwayMint)
+                MoneyPulseLegend("Expense", RunwayRed)
+            }
+        }
+
+        if (totalIncomePaise == 0L && totalExpensePaise == 0L) {
             OutlinedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
                 Column(
                     Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
@@ -947,9 +961,9 @@ private fun MoneyPulseChart(
                     verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
                     Icon(Icons.Outlined.AutoGraph, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                    Text("No spending recorded", fontWeight = FontWeight.SemiBold)
+                    Text("No money movement recorded", fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Record an expense after you actually spend the money. Your spending bars will appear here.",
+                        "Record income or an expense after it actually happens. Your cash-flow bars will appear here.",
                         color = RunwayMuted,
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodySmall
@@ -986,16 +1000,51 @@ private fun MoneyPulseChart(
                                 verticalAlignment = Alignment.Bottom
                             ) {
                                 points.forEach { point ->
-                                    val fraction = (point.amountPaise.toDouble() / chartMaxPaise.toDouble()).toFloat().coerceIn(0f, 1f)
-                                    Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {
-                                        if (point.amountPaise > 0L) {
+                                    val incomeFraction = (point.incomePaise.toDouble() / chartMaxPaise.toDouble()).toFloat().coerceIn(0f, 1f)
+                                    val expenseFraction = (point.expensePaise.toDouble() / chartMaxPaise.toDouble()).toFloat().coerceIn(0f, 1f)
+                                    Row(
+                                        Modifier.weight(1f).fillMaxHeight(),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.Bottom
+                                    ) {
+                                        if (point.incomePaise > 0L) {
                                             Box(
                                                 Modifier
-                                                    .fillMaxWidth(if (points.size <= 7) 0.62f else 0.72f)
-                                                    .height(maxOf(8f, 154f * fraction).dp)
-                                                    .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
-                                                    .background(RunwayRed)
-                                            )
+                                                    .weight(1f)
+                                                    .fillMaxHeight()
+                                                    .padding(horizontal = 2.dp),
+                                                contentAlignment = Alignment.BottomCenter
+                                            ) {
+                                                Box(
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .height(maxOf(8f, 154f * incomeFraction).dp)
+                                                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                                        .background(RunwayMint)
+                                                )
+                                            }
+                                        } else {
+                                            Spacer(Modifier.weight(1f))
+                                        }
+
+                                        if (point.expensePaise > 0L) {
+                                            Box(
+                                                Modifier
+                                                    .weight(1f)
+                                                    .fillMaxHeight()
+                                                    .padding(horizontal = 2.dp),
+                                                contentAlignment = Alignment.BottomCenter
+                                            ) {
+                                                Box(
+                                                    Modifier
+                                                        .fillMaxWidth()
+                                                        .height(maxOf(8f, 154f * expenseFraction).dp)
+                                                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                                        .background(RunwayRed)
+                                                )
+                                            }
+                                        } else {
+                                            Spacer(Modifier.weight(1f))
                                         }
                                     }
                                 }
@@ -1003,7 +1052,7 @@ private fun MoneyPulseChart(
                         }
 
                         Row(
-                            Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, top = 7.dp),
+                            Modifier.fillMaxWidth().padding(horizontal = 6.dp, top = 7.dp),
                             horizontalArrangement = Arrangement.spacedBy(if (points.size <= 7) 8.dp else 4.dp)
                         ) {
                             points.forEach { point ->
@@ -1015,13 +1064,33 @@ private fun MoneyPulseChart(
                     }
                 }
 
-                highest?.let {
+                if (highestPoint != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                        Text("Highest: ${compactMoney(it.amountPaise)} · ${it.label}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                        val highestType = if (highestPoint.incomePaise >= highestPoint.expensePaise) "Income" else "Expense"
+                        Text(
+                            "Highest $highestType: ${compactMoney(highestPaise)} · ${highestPoint.label}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
+                }
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    Text("Avg income ${compactMoney(averageIncomePaise)} / day", style = MaterialTheme.typography.labelSmall, color = RunwayMuted)
+                    Text("Avg spent ${compactMoney(averageExpensePaise)} / day", style = MaterialTheme.typography.labelSmall, color = RunwayMuted)
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MoneyPulseLegend(label: String, indicator: androidx.compose.ui.graphics.Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Box(
+            Modifier.size(9.dp).clip(CircleShape).background(indicator)
+        )
+        Text(label, style = MaterialTheme.typography.labelSmall, color = RunwayMuted)
     }
 }
 
