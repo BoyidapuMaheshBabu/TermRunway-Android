@@ -1290,7 +1290,7 @@ private fun TransactionEditorScreen(
             }
             item {
                 OutlinedButton(
-                    onClick = { pickDate(context, date) { date = it } },
+                    onClick = { pickDate(context, date, maxDateMs = System.currentTimeMillis()) { date = it } },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Outlined.CalendarMonth, null)
@@ -2055,9 +2055,14 @@ private fun SettingsAction(
     }
 }
 
-private fun pickDate(context: android.content.Context, current: Long, onPicked: (Long) -> Unit) {
+private fun pickDate(
+    context: android.content.Context,
+    current: Long,
+    maxDateMs: Long? = null,
+    onPicked: (Long) -> Unit
+) {
     val calendar = Calendar.getInstance().apply { timeInMillis = current }
-    DatePickerDialog(
+    val dialog = DatePickerDialog(
         context,
         { _, year, month, day ->
             onPicked(
@@ -2070,7 +2075,9 @@ private fun pickDate(context: android.content.Context, current: Long, onPicked: 
         calendar.get(Calendar.YEAR),
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
-    ).show()
+    )
+    maxDateMs?.let { dialog.datePicker.maxDate = it }
+    dialog.show()
 }
 
 private fun startOfDay(ms: Long): Long = Calendar.getInstance().apply {
