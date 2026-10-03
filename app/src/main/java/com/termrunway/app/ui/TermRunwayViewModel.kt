@@ -139,6 +139,12 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(message = "Choose a category.") }
             return
         }
+        if (transaction.dateMs > startOfToday() + 86_400_000L - 1L) {
+            _state.update {
+                it.copy(message = "Actual transactions can only be today or an earlier date. Use Plan mode for future money.")
+            }
+            return
+        }
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
             runCatching { repository.insertTransaction(transaction) }
@@ -156,6 +162,12 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     fun updateTransaction(transaction: Transaction, onDone: (() -> Unit)? = null) {
         if (transaction.amountPaise <= 0) {
             _state.update { it.copy(message = "Enter an amount greater than ₹0.") }
+            return
+        }
+        if (transaction.dateMs > startOfToday() + 86_400_000L - 1L) {
+            _state.update {
+                it.copy(message = "Actual transactions can only be today or an earlier date. Use Plan mode for future money.")
+            }
             return
         }
         viewModelScope.launch {
