@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -125,7 +126,6 @@ import java.util.Calendar
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.roundToLong
 
 private enum class RootTab(val label: String) {
     HOME("Home"), PLAN("Plan"), ACTIVITY("Activity"), INSIGHTS("Insights")
@@ -388,7 +388,7 @@ private fun HomeScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = WindowInsets.navigationBars.asPaddingValues().let { it.copy(bottom = 110.dp) },
+        contentPadding = PaddingValues(bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -933,10 +933,6 @@ private fun TransactionEditorScreen(
         categories.filter { it.type == CategoryType.EXPENSE }
     }
 
-    if (category !in activeCategories.map { it.name } && activeCategories.isNotEmpty()) {
-        category = activeCategories.first().name
-    }
-
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -958,20 +954,26 @@ private fun TransactionEditorScreen(
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-            contentPadding = WindowInsets.navigationBars.asPaddingValues().let { it.copy(bottom = 28.dp) },
+            contentPadding = PaddingValues(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         currentType == TransactionType.EXPENSE,
-                        { currentType = TransactionType.EXPENSE },
+                        {
+                            currentType = TransactionType.EXPENSE
+                            category = categories.firstOrNull { it.type == CategoryType.EXPENSE }?.name.orEmpty()
+                        },
                         label = { Text("Expense") },
                         modifier = Modifier.weight(1f)
                     )
                     FilterChip(
                         currentType == TransactionType.INCOME,
-                        { currentType = TransactionType.INCOME },
+                        {
+                            currentType = TransactionType.INCOME
+                            category = categories.firstOrNull { it.type == CategoryType.INCOME }?.name.orEmpty()
+                        },
                         label = { Text("Income") },
                         modifier = Modifier.weight(1f)
                     )
@@ -1138,7 +1140,7 @@ private fun PlanEditorScreen(
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-            contentPadding = WindowInsets.navigationBars.asPaddingValues().let { it.copy(bottom = 28.dp) },
+            contentPadding = PaddingValues(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
             item {
@@ -1568,7 +1570,7 @@ private fun SettingsScreen(
     ) { padding ->
         LazyColumn(
             Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
-            contentPadding = WindowInsets.navigationBars.asPaddingValues().let { it.copy(bottom = 30.dp) },
+            contentPadding = PaddingValues(bottom = 30.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item { Text("Profile", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
@@ -1576,8 +1578,9 @@ private fun SettingsScreen(
                 OutlinedTextField(
                     editName,
                     {
-                        editName = it.take(60)
-                        onName(editName)
+                        val next = it.take(60)
+                        editName = next
+                        onName(next)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Name") },
@@ -1754,8 +1757,12 @@ private fun addDays(ms: Long, count: Int): Long = ms + DAY * count
 
 private fun parseMoney(value: String): Long =
     runCatching {
-        (value.trim().replace(",", "").toDouble() * 100.0)
-            .roundToLong()
+        val normalized = value.trim().replace(",", "")
+        require(normalized.isNotEmpty())
+        java.math.BigDecimal(normalized)
+            .setScale(2, java.math.RoundingMode.HALF_UP)
+            .movePointRight(2)
+            .longValueExact()
             .coerceAtLeast(0L)
     }.getOrDefault(0L)
 
