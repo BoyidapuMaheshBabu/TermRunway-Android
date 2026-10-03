@@ -70,8 +70,9 @@ import com.termrunway.app.ui.theme.RunwayMint
 @Composable
 fun AppLogoMark(modifier: Modifier = Modifier) {
     androidx.compose.foundation.Image(
-        painter = painterResource(id = R.drawable.ic_launcher),
+        painter = painterResource(id = R.drawable.termrunway_logo),
         contentDescription = "TermRunway logo",
+        contentScale = ContentScale.Fit,
         modifier = modifier
     )
 }
