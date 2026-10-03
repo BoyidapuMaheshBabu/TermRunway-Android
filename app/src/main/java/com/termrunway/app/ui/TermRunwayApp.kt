@@ -177,11 +177,7 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
         TransactionEditorScreen(
             existing = selectedTransaction,
             type = selectedTransaction?.type ?: TransactionType.EXPENSE,
-            categories = if ((selectedTransaction?.type ?: TransactionType.EXPENSE) == TransactionType.INCOME) {
-                state.incomeCategories
-            } else {
-                state.expenseCategories
-            },
+            categories = state.categories,
             onBack = {
                 transactionOpen = false
                 selectedTransactionId = 0L
