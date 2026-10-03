@@ -4,7 +4,6 @@ import android.app.DatePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -899,17 +898,11 @@ private fun MoneyPulseChart(
     windowDays: Int
 ) {
     val rawDays = windowDays.coerceIn(7, 90)
-    val points = if (rawDays <= 30) {
+    val points = if (rawDays == 7) {
         (0 until rawDays).map { offset ->
             val day = addDays(startMs, offset)
             MoneyPulsePoint(
-                label = if (rawDays == 7) {
-                    java.text.SimpleDateFormat("EEE", Locale.getDefault())
-                        .format(java.util.Date(day))
-                } else {
-                    java.text.SimpleDateFormat("dd MMM", Locale.getDefault())
-                        .format(java.util.Date(day))
-                },
+                label = java.text.SimpleDateFormat("EEE", Locale.getDefault()).format(java.util.Date(day)),
                 amountPaise = FinancialCalculator.dayExpense(transactions, day)
             )
         }
@@ -918,155 +911,113 @@ private fun MoneyPulseChart(
         (0 until weeks).map { week ->
             val weekStart = addDays(startMs, week * 7)
             val length = minOf(7, rawDays - week * 7)
-            val total = (0 until length).sumOf { offset ->
-                FinancialCalculator.dayExpense(transactions, addDays(weekStart, offset))
-            }
             MoneyPulsePoint(
-                label = java.text.SimpleDateFormat("dd MMM", Locale.getDefault())
-                    .format(java.util.Date(weekStart)),
-                amountPaise = total
+                label = java.text.SimpleDateFormat("dd MMM", Locale.getDefault()).format(java.util.Date(weekStart)),
+                amountPaise = (0 until length).sumOf { offset ->
+                    FinancialCalculator.dayExpense(transactions, addDays(weekStart, offset))
+                }
             )
         }
     }
 
     val totalPaise = points.sumOf { it.amountPaise }
-    val peakPaise = points.maxOfOrNull { it.amountPaise } ?: 0L
-    val averagePaise = if (points.isEmpty()) 0L else totalPaise / points.size
-    val maxPaise = peakPaise.coerceAtLeast(1L)
+    val highest = points.maxByOrNull { it.amountPaise }
+    val highestPaise = highest?.amountPaise ?: 0L
+    val averagePaise = if (rawDays == 7) totalPaise / 7L else totalPaise / points.size.coerceAtLeast(1)
+    val chartMaxPaise = highestPaise.coerceAtLeast(1L)
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            if (rawDays == 7) "Actual expenses · each bar is one day" else "Actual expenses · grouped by week for readability",
+            style = MaterialTheme.typography.bodySmall,
+            color = RunwayMuted
+        )
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MoneyPulseSummary("Total", totalPaise, Modifier.weight(1f))
-            MoneyPulseSummary("Peak", peakPaise, Modifier.weight(1f))
-            MoneyPulseSummary(
-                if (rawDays > 30) "Avg / week" else "Avg / day",
-                averagePaise,
-                Modifier.weight(1f)
-            )
+            MoneyPulseSummary("Highest", highestPaise, Modifier.weight(1f))
+            MoneyPulseSummary(if (rawDays == 7) "Avg / day" else "Avg / week", averagePaise, Modifier.weight(1f))
         }
 
         if (totalPaise == 0L) {
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp)
-            ) {
+            OutlinedCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) {
                 Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 22.dp, horizontal = 16.dp),
+                    Modifier.fillMaxWidth().padding(vertical = 24.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    verticalArrangement = Arrangement.spacedBy(7.dp)
                 ) {
-                    Icon(
-                        Icons.Outlined.AutoGraph,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Icon(Icons.Outlined.AutoGraph, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Text("No spending recorded", fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Add an expense to see your spending trend here.",
+                        "Record an expense after you actually spend the money. Your spending bars will appear here.",
                         color = RunwayMuted,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(170.dp),
+                    Modifier.fillMaxWidth().height(188.dp),
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Column(
-                        Modifier
-                            .width(42.dp)
-                            .fillMaxHeight(),
+                        Modifier.width(50.dp).fillMaxHeight().padding(vertical = 2.dp),
                         verticalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(
-                            compactMoney(maxPaise),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = RunwayMuted
-                        )
-                        Text(
-                            compactMoney(maxPaise / 2),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = RunwayMuted
-                        )
-                        Text(
-                            "₹0",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = RunwayMuted
-                        )
+                        Text(compactMoney(chartMaxPaise), style = MaterialTheme.typography.labelSmall, color = RunwayMuted)
+                        Text(compactMoney(chartMaxPaise / 2L), style = MaterialTheme.typography.labelSmall, color = RunwayMuted)
+                        Text("₹0", style = MaterialTheme.typography.labelSmall, color = RunwayMuted)
                     }
 
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                    ) {
-                        Column(
-                            Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            repeat(3) {
+                    Column(Modifier.weight(1f).fillMaxHeight()) {
+                        Box(Modifier.fillMaxWidth().weight(1f)) {
+                            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
                                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            }
+
+                            Row(
+                                Modifier.fillMaxSize().padding(horizontal = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(if (points.size <= 7) 8.dp else 4.dp),
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                points.forEach { point ->
+                                    val fraction = (point.amountPaise.toDouble() / chartMaxPaise.toDouble()).toFloat().coerceIn(0f, 1f)
+                                    Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.BottomCenter) {
+                                        if (point.amountPaise > 0L) {
+                                            Box(
+                                                Modifier
+                                                    .fillMaxWidth(if (points.size <= 7) 0.62f else 0.72f)
+                                                    .height(maxOf(8f, 154f * fraction).dp)
+                                                    .clip(RoundedCornerShape(topStart = 7.dp, topEnd = 7.dp))
+                                                    .background(RunwayRed)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
                         Row(
-                            Modifier
-                                .fillMaxSize()
-                                .padding(start = 6.dp, end = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(if (points.size > 20) 2.dp else 6.dp),
-                            verticalAlignment = Alignment.Bottom
+                            Modifier.fillMaxWidth().padding(horizontal = 6.dp, top = 7.dp),
+                            horizontalArrangement = Arrangement.spacedBy(if (points.size <= 7) 8.dp else 4.dp)
                         ) {
                             points.forEach { point ->
-                                Box(
-                                    Modifier
-                                        .weight(1f)
-                                        .fillMaxHeight(),
-                                    contentAlignment = Alignment.BottomCenter
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .width(if (points.size > 20) 6.dp else 14.dp)
-                                            .fillMaxHeight(
-                                                (point.amountPaise.toDouble() / maxPaise.toDouble())
-                                                    .toFloat()
-                                                    .coerceIn(0.02f, 1f)
-                                            )
-                                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                            .background(RunwayRed)
-                                    )
+                                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                    Text(point.label, style = MaterialTheme.typography.labelSmall, color = RunwayMuted, maxLines = 1)
                                 }
                             }
                         }
                     }
                 }
 
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(start = 48.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    points.forEachIndexed { index, point ->
-                        val showLabel = when {
-                            points.size <= 7 -> true
-                            points.size <= 30 -> index == 0 || index == points.lastIndex || index % 5 == 0
-                            else -> true
-                        }
-                        Text(
-                            if (showLabel) point.label else "",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = RunwayMuted,
-                            maxLines = 1
-                        )
+                highest?.let {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                        Text("Highest: ${compactMoney(it.amountPaise)} · ${it.label}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
