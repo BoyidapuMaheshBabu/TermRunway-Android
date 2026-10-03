@@ -89,9 +89,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
@@ -842,7 +840,11 @@ private fun InsightsScreen(
                 Column(Modifier.padding(16.dp)) {
                     Text("Money pulse", fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(10.dp))
-                    MoneyPulseChart(state.transactions, start)
+                    MoneyPulseChart(
+                        transactions = state.transactions,
+                        startMs = start,
+                        windowDays = window
+                    )
                 }
             }
         }
@@ -885,41 +887,232 @@ private fun InsightsScreen(
     }
 }
 
+private data class MoneyPulsePoint(
+    val label: String,
+    val amountPaise: Long
+)
+
 @Composable
-private fun MoneyPulseChart(transactions: List<Transaction>, startMs: Long) {
-    val days = ((startOfDay(System.currentTimeMillis()) - startMs) / DAY).toInt() + 1
-    val values = (0 until days).map { offset ->
-        val day = addDays(startMs, offset)
-        FinancialCalculator.dayExpense(transactions, day)
-    }
-    val maxValue = values.maxOrNull()?.coerceAtLeast(1) ?: 1
-    Canvas(Modifier.fillMaxWidth().height(150.dp)) {
-        val width = size.width
-        val height = size.height
-        val horizontal = if (values.size <= 1) width else width / (values.size - 1)
-        var previous: Offset? = null
-        values.forEachIndexed { index, value ->
-            val x = index * horizontal
-            val y = height - (value.toDouble() / maxValue.toDouble() * (height - 20)).toFloat()
-            val point = Offset(x, y)
-            previous?.let {
-                drawLine(
-                    color = RunwayRed,
-                    start = it,
-                    end = point,
-                    strokeWidth = 5f,
-                    cap = StrokeCap.Round
-                )
-            }
-            drawCircle(RunwayRed, radius = 5f, center = point)
-            previous = point
+private fun MoneyPulseChart(
+    transactions: List<Transaction>,
+    startMs: Long,
+    windowDays: Int
+) {
+    val rawDays = windowDays.coerceIn(7, 90)
+    val points = if (rawDays <= 30) {
+        (0 until rawDays).map { offset ->
+            val day = addDays(startMs, offset)
+            MoneyPulsePoint(
+                label = if (rawDays == 7) {
+                    java.text.SimpleDateFormat("EEE", Locale.getDefault())
+                        .format(java.util.Date(day))
+                } else {
+                    java.text.SimpleDateFormat("dd MMM", Locale.getDefault())
+                        .format(java.util.Date(day))
+                },
+                amountPaise = FinancialCalculator.dayExpense(transactions, day)
+            )
         }
-        drawLine(
-            color = RunwayMuted,
-            start = Offset(0f, height - 1f),
-            end = Offset(width, height - 1f),
-            strokeWidth = 2f
+    } else {
+        val weeks = (rawDays + 6) / 7
+        (0 until weeks).map { week ->
+            val weekStart = addDays(startMs, week * 7)
+            val length = minOf(7, rawDays - week * 7)
+            val total = (0 until length).sumOf { offset ->
+                FinancialCalculator.dayExpense(transactions, addDays(weekStart, offset))
+            }
+            MoneyPulsePoint(
+                label = java.text.SimpleDateFormat("dd MMM", Locale.getDefault())
+                    .format(java.util.Date(weekStart)),
+                amountPaise = total
+            )
+        }
+    }
+
+    val totalPaise = points.sumOf { it.amountPaise }
+    val peakPaise = points.maxOfOrNull { it.amountPaise } ?: 0L
+    val averagePaise = if (points.isEmpty()) 0L else totalPaise / points.size
+    val maxPaise = peakPaise.coerceAtLeast(1L)
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            MoneyPulseSummary("Total", totalPaise, Modifier.weight(1f))
+            MoneyPulseSummary("Peak", peakPaise, Modifier.weight(1f))
+            MoneyPulseSummary(
+                if (rawDays > 30) "Avg / week" else "Avg / day",
+                averagePaise,
+                Modifier.weight(1f)
+            )
+        }
+
+        if (totalPaise == 0L) {
+            OutlinedCard(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 22.dp, horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Outlined.AutoGraph,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Text("No spending recorded", fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "Add an expense to see your spending trend here.",
+                        color = RunwayMuted,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(170.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(
+                        Modifier
+                            .width(42.dp)
+                            .fillMaxHeight(),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            compactMoney(maxPaise),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = RunwayMuted
+                        )
+                        Text(
+                            compactMoney(maxPaise / 2),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = RunwayMuted
+                        )
+                        Text(
+                            "₹0",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = RunwayMuted
+                        )
+                    }
+
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        Column(
+                            Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            repeat(3) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                            }
+                        }
+
+                        Row(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(start = 6.dp, end = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(if (points.size > 20) 2.dp else 6.dp),
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            points.forEach { point ->
+                                Box(
+                                    Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    contentAlignment = Alignment.BottomCenter
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .width(if (points.size > 20) 6.dp else 14.dp)
+                                            .fillMaxHeight(
+                                                (point.amountPaise.toDouble() / maxPaise.toDouble())
+                                                    .toFloat()
+                                                    .coerceIn(0.02f, 1f)
+                                            )
+                                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                            .background(RunwayRed)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = 48.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    points.forEachIndexed { index, point ->
+                        val showLabel = when {
+                            points.size <= 7 -> true
+                            points.size <= 30 -> index == 0 || index == points.lastIndex || index % 5 == 0
+                            else -> true
+                        }
+                        Text(
+                            if (showLabel) point.label else "",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = RunwayMuted,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MoneyPulseSummary(
+    label: String,
+    amountPaise: Long,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
+    ) {
+        Column(
+            Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = RunwayMuted
+            )
+            Text(
+                compactMoney(amountPaise),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+private fun compactMoney(paise: Long): String {
+    val rupees = kotlin.math.abs(paise) / 100.0
+    val sign = if (paise < 0) "-" else ""
+    return when {
+        rupees >= 100000 -> sign + "₹" + String.format(Locale.getDefault(), "%.1fL", rupees / 100000.0)
+        rupees >= 1000 -> sign + "₹" + String.format(Locale.getDefault(), "%.1fk", rupees / 1000.0)
+        else -> sign + "₹" + String.format(Locale.getDefault(), "%.0f", rupees)
     }
 }
 
