@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.termrunway.app.ui.TermRunwayApp
 import com.termrunway.app.ui.TermRunwayViewModel
 import com.termrunway.app.ui.ThemeMode
@@ -18,7 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val state = viewModel.state.value
+            val state by viewModel.state.collectAsStateWithLifecycle()
             val dark = when (state.themeMode) {
                 ThemeMode.DARK -> true
                 ThemeMode.LIGHT -> false
