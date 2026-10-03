@@ -311,35 +311,37 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
                 }
             }
         }
-    ) {
-        when (tab) {
-            RootTab.HOME -> HomeScreen(
-                state = state,
-                planMode = planMode,
-                onPlanMode = { planMode = it },
-                onAdd = { transactionOpen = true },
-                onTransaction = {
-                    selectedTransactionId = it.id
-                    transactionOpen = true
-                },
-                onPlanEdit = { planEditorOpen = true }
-            )
-            RootTab.PLAN -> PlanScreen(
-                state = state,
-                onCreateOrEdit = { planEditorOpen = true },
-                onTransaction = {
-                    selectedTransactionId = it.id
-                    transactionOpen = true
-                }
-            )
-            RootTab.ACTIVITY -> ActivityScreen(
-                state = state,
-                onTransaction = {
-                    selectedTransactionId = it.id
-                    transactionOpen = true
-                }
-            )
-            RootTab.INSIGHTS -> InsightsScreen(state)
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            when (tab) {
+                RootTab.HOME -> HomeScreen(
+                    state = state,
+                    planMode = planMode,
+                    onPlanMode = { planMode = it },
+                    onAdd = { transactionOpen = true },
+                    onTransaction = {
+                        selectedTransactionId = it.id
+                        transactionOpen = true
+                    },
+                    onPlanEdit = { planEditorOpen = true }
+                )
+                RootTab.PLAN -> PlanScreen(
+                    state = state,
+                    onCreateOrEdit = { planEditorOpen = true },
+                    onTransaction = {
+                        selectedTransactionId = it.id
+                        transactionOpen = true
+                    }
+                )
+                RootTab.ACTIVITY -> ActivityScreen(
+                    state = state,
+                    onTransaction = {
+                        selectedTransactionId = it.id
+                        transactionOpen = true
+                    }
+                )
+                RootTab.INSIGHTS -> InsightsScreen(state)
+            }
         }
     }
 }
@@ -349,7 +351,7 @@ private fun StartupScreen() {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
-    )
+    ) {}
 }
 
 @Composable
