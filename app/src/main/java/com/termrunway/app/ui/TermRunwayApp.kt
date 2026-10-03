@@ -349,7 +349,7 @@ private fun WelcomeScreen(onSave: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            AppLogoMark(Modifier.size(82.dp))
+            AppLogoMark(Modifier.fillMaxWidth().height(150.dp))
             Spacer(Modifier.height(24.dp))
             Text(
                 "Welcome to TermRunway",
