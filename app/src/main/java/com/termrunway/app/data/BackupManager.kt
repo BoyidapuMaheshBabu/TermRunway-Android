@@ -121,11 +121,13 @@ object BackupManager {
         val incomeArray = root.optJSONArray("plannedIncomes") ?: JSONArray()
         for (i in 0 until incomeArray.length()) {
             val o = incomeArray.getJSONObject(i)
+            val amount = o.getLong("amountPaise")
+            require(amount >= 0) { "Invalid planned income amount" }
             incomes += PlannedIncome(
                 id = o.optLong("id"),
                 planId = o.getLong("planId"),
                 source = o.getString("source").trim().also { require(it.isNotEmpty()) },
-                amountPaise = o.getLong("amountPaise"),
+                amountPaise = amount,
                 expectedDateMs = if (o.isNull("expectedDateMs")) null else o.getLong("expectedDateMs")
             )
         }
@@ -134,11 +136,13 @@ object BackupManager {
         val expenseArray = root.optJSONArray("plannedExpenses") ?: JSONArray()
         for (i in 0 until expenseArray.length()) {
             val o = expenseArray.getJSONObject(i)
+            val amount = o.getLong("amountPaise")
+            require(amount >= 0) { "Invalid planned expense amount" }
             expenses += PlannedExpense(
                 id = o.optLong("id"),
                 planId = o.getLong("planId"),
                 category = o.getString("category").trim().also { require(it.isNotEmpty()) },
-                amountPaise = o.getLong("amountPaise"),
+                amountPaise = amount,
                 expectedDateMs = if (o.isNull("expectedDateMs")) null else o.getLong("expectedDateMs"),
                 frequency = o.optString("frequency", "once")
             )
