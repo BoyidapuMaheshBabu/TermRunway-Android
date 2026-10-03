@@ -902,7 +902,7 @@ private fun MoneyPulseChart(
         (0 until rawDays).map { offset ->
             val day = addDays(startMs, offset)
             MoneyPulsePoint(
-                label = java.text.SimpleDateFormat("EEE", Locale.getDefault()).format(java.util.Date(day)),
+                label = if (offset == rawDays - 1) "Today" else java.text.SimpleDateFormat("dd MMM", Locale.getDefault()).format(java.util.Date(day)),
                 amountPaise = FinancialCalculator.dayExpense(transactions, day)
             )
         }
@@ -923,7 +923,7 @@ private fun MoneyPulseChart(
     val totalPaise = points.sumOf { it.amountPaise }
     val highest = points.maxByOrNull { it.amountPaise }
     val highestPaise = highest?.amountPaise ?: 0L
-    val averagePaise = if (rawDays == 7) totalPaise / 7L else totalPaise / points.size.coerceAtLeast(1)
+    val averagePaise = totalPaise / rawDays.toLong().coerceAtLeast(1L)
     val chartMaxPaise = highestPaise.coerceAtLeast(1L)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -936,7 +936,7 @@ private fun MoneyPulseChart(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MoneyPulseSummary("Total", totalPaise, Modifier.weight(1f))
             MoneyPulseSummary("Highest", highestPaise, Modifier.weight(1f))
-            MoneyPulseSummary(if (rawDays == 7) "Avg / day" else "Avg / week", averagePaise, Modifier.weight(1f))
+            MoneyPulseSummary("Avg / day", averagePaise, Modifier.weight(1f))
         }
 
         if (totalPaise == 0L) {
