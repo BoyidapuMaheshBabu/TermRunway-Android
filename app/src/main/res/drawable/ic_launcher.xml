@@ -3,13 +3,39 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Deep-blue road / runway -->
     <path
-        android:fillColor="#0B1020"
-        android:pathData="M54,0A54,54 0,1 0,54 108A54,54 0,1 0,54 0" />
+        android:fillColor="#082A5C"
+        android:pathData="M16,91 C28,78 44,68 59,58 C71,50 82,41 94,27 L101,30 C95,46 86,58 74,69 C60,82 46,92 31,99 C25,101 19,99 16,91 Z" />
+
+    <!-- Blue-to-teal growth bars -->
     <path
-        android:fillColor="#5EE7B2"
-        android:pathData="M32,22h28c11,0 19,8 19,18c0,8 -5,14 -12,17l14,20h-14L54,59h-8v18H32V22zM46,35v12h13c4,0 7,-2 7,-6s-3,-6 -7,-6H46z" />
+        android:fillColor="#2878F0"
+        android:pathData="M18,73 L18,54 L29,47 L29,68 Z" />
+    <path
+        android:fillColor="#1C91DA"
+        android:pathData="M34,64 L34,39 L45,32 L45,57 Z" />
+    <path
+        android:fillColor="#12A9C1"
+        android:pathData="M50,55 L50,28 L61,21 L61,48 Z" />
+    <path
+        android:fillColor="#20CF7A"
+        android:pathData="M66,45 L66,18 L78,11 L78,36 Z" />
+
+    <!-- Upward arrow -->
+    <path
+        android:fillColor="#20CF7A"
+        android:pathData="M73,34 L91,17 L85,15 L99,8 L97,24 L93,20 L76,42 Z" />
+
+    <!-- Road lane -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M25,85h58v5h-58z" />
+        android:pathData="M38,87 L45,82 L50,79 L47,85 L42,90 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M56,75 L63,69 L68,66 L64,72 L59,78 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M72,61 L79,55 L84,51 L80,58 L75,64 Z" />
 </vector>
