@@ -8,6 +8,11 @@ import android.database.sqlite.SQLiteOpenHelper
 class TermRunwayDatabase(context: Context) :
     SQLiteOpenHelper(context, "termrunway.db", null, 1) {
 
+    override fun onConfigure(db: SQLiteDatabase) {
+        super.onConfigure(db)
+        db.setForeignKeyConstraintsEnabled(true)
+    }
+
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""
             CREATE TABLE transactions (
