@@ -31,6 +31,7 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 data class AppUiState(
     val name: String = "",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val preferencesLoaded: Boolean = false,
     val transactions: List<Transaction> = emptyList(),
     val plans: List<FinancialPlan> = emptyList(),
     val activePlan: FinancialPlan? = null,
@@ -67,7 +68,13 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 name to theme
             }.collect { (name, theme) ->
-                _state.update { it.copy(name = name, themeMode = theme) }
+                _state.update {
+                    it.copy(
+                        name = name,
+                        themeMode = theme,
+                        preferencesLoaded = true
+                    )
+                }
             }
         }
         refresh()

@@ -147,6 +147,11 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
         }
     }
 
+    if (!state.preferencesLoaded) {
+        StartupScreen()
+        return
+    }
+
     if (state.name.isBlank()) {
         WelcomeScreen(onSave = viewModel::setName)
         return
@@ -337,6 +342,14 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
             RootTab.INSIGHTS -> InsightsScreen(state)
         }
     }
+}
+
+@Composable
+private fun StartupScreen() {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    )
 }
 
 @Composable
