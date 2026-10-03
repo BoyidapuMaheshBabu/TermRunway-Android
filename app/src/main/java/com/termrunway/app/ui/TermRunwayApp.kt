@@ -1052,7 +1052,7 @@ private fun MoneyPulseChart(
                         }
 
                         Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 6.dp, top = 7.dp),
+                            Modifier.fillMaxWidth().padding(start = 6.dp, top = 7.dp, end = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(if (points.size <= 7) 8.dp else 4.dp)
                         ) {
                             points.forEach { point ->
