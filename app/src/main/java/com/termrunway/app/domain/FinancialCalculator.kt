@@ -94,7 +94,7 @@ object FinancialCalculator {
         val averageSpend = if (elapsedDays > 0) actualExpense / elapsedDays else 0L
         val availablePerDay = if (remainingDays > 0) actualRemaining / remainingDays else 0L
 
-        val threshold = max(500L, expectedSpendToDate / 5L)
+        val threshold = max(50_000L, expectedSpendToDate / 5L)
         val status = when {
             todayMs < plan.startMs -> "Upcoming"
             todayMs > plan.endMs -> "Completed"
