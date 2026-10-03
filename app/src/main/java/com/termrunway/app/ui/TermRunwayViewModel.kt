@@ -7,7 +7,6 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.termrunway.app.data.BackupManager
-import com.termrunway.app.data.BackupSnapshot
 import com.termrunway.app.data.Category
 import com.termrunway.app.data.CategoryType
 import com.termrunway.app.data.FinancialPlan
@@ -301,9 +300,9 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(busy = true) }
             runCatching {
                 repository.clearAll()
-                preferences.edit {
-                    remove(NAME_KEY)
-                    it[THEME_KEY] = "system"
+                preferences.edit { prefs ->
+                    prefs.remove(NAME_KEY)
+                    prefs[THEME_KEY] = "system"
                 }
             }.onSuccess {
                 refresh()

@@ -11,7 +11,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -31,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.ArrowDownward
@@ -87,12 +87,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -297,7 +299,7 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        androidx.compose.material.icons.Icons.Outlined.Add,
+                        Icons.Outlined.Add,
                         contentDescription = "Add transaction",
                         tint = MaterialTheme.colorScheme.onPrimary
                     )
@@ -683,7 +685,7 @@ private fun ActivityScreen(state: AppUiState, onTransaction: (Transaction) -> Un
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = WindowInsets.navigationBars.asPaddingValues().let { it.copy(bottom = 100.dp) },
+        contentPadding = PaddingValues(bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
@@ -759,7 +761,7 @@ private fun InsightsScreen(state: AppUiState) {
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = WindowInsets.navigationBars.asPaddingValues().let { it.copy(bottom = 100.dp) },
+        contentPadding = PaddingValues(bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -1118,6 +1120,7 @@ private fun TransactionEditorScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PlanEditorScreen(
     existing: FinancialPlan?,
@@ -1491,7 +1494,7 @@ private fun PlanScreen(
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        contentPadding = WindowInsets.navigationBars.asPaddingValues().let { it.copy(bottom = 100.dp) },
+        contentPadding = PaddingValues(bottom = 100.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
@@ -1558,6 +1561,7 @@ private fun PlanScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SettingsScreen(
     state: AppUiState,
@@ -1648,13 +1652,6 @@ private fun SettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
-                    }
-                },
-                actions = {
-                    if (existing != null) {
-                        IconButton(onClick = { showDelete = true }) {
-                            Icon(Icons.Outlined.Delete, "Delete plan", tint = RunwayRed)
-                        }
                     }
                 }
             )
