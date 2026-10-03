@@ -2,7 +2,7 @@ name: Android build
 
 on:
   push:
-    branches: ["termrunway"]
+    branches: ["main", "termrunway", "feature/offline-v1-completion"]
   pull_request:
     branches: ["termrunway"]
 

@@ -147,7 +147,7 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
         }
     }
 
-    if (!state.preferencesLoaded) {
+    if (!state.preferencesLoaded || !state.dataLoaded) {
         StartupScreen()
         return
     }
@@ -246,28 +246,6 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets.safeDrawing,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        AppLogoMark(Modifier.size(30.dp))
-                        Text(
-                            "TermRunway",
-                            modifier = Modifier.padding(start = 9.dp),
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { settingsOpen = true }) {
-                        Icon(Icons.Outlined.Settings, contentDescription = "Settings")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
         bottomBar = {
             NavigationBar {
                 RootTab.entries.forEach { item ->
@@ -312,11 +290,16 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
             }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             when (tab) {
                 RootTab.HOME -> HomeScreen(
                     state = state,
                     planMode = planMode,
+                    onSettings = { settingsOpen = true },
                     onPlanMode = { planMode = it },
                     onAdd = { transactionOpen = true },
                     onTransaction = {
@@ -327,6 +310,7 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
                 )
                 RootTab.PLAN -> PlanScreen(
                     state = state,
+                    onSettings = { settingsOpen = true },
                     onCreateOrEdit = { planEditorOpen = true },
                     onTransaction = {
                         selectedTransactionId = it.id
@@ -335,12 +319,16 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
                 )
                 RootTab.ACTIVITY -> ActivityScreen(
                     state = state,
+                    onSettings = { settingsOpen = true },
                     onTransaction = {
                         selectedTransactionId = it.id
                         transactionOpen = true
                     }
                 )
-                RootTab.INSIGHTS -> InsightsScreen(state)
+                RootTab.INSIGHTS -> InsightsScreen(
+                    state = state,
+                    onSettings = { settingsOpen = true }
+                )
             }
         }
     }
@@ -398,9 +386,34 @@ private fun WelcomeScreen(onSave: (String) -> Unit) {
 }
 
 @Composable
+private fun ScreenHeader(
+    title: String,
+    subtitle: String,
+    onSettings: () -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(subtitle, color = RunwayMuted)
+        }
+        IconButton(onClick = onSettings) {
+            Icon(Icons.Outlined.Settings, contentDescription = "Settings")
+        }
+    }
+}
+
+@Composable
 private fun HomeScreen(
     state: AppUiState,
     planMode: Boolean,
+    onSettings: () -> Unit,
     onPlanMode: (Boolean) -> Unit,
     onAdd: () -> Unit,
     onTransaction: (Transaction) -> Unit,
@@ -416,9 +429,28 @@ private fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Column(Modifier.padding(top = 8.dp)) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "TermRunway",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text("Daily money tracker", color = RunwayMuted)
+                }
+                IconButton(onClick = onSettings) {
+                    Icon(Icons.Outlined.Settings, contentDescription = "Settings")
+                }
+            }
+        }
+
+        item {
+            Column {
                 Text(
-                    "Hi, " + state.name,
+                    "Hi, ${state.name} 👋",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Black
                 )
@@ -676,7 +708,11 @@ private fun TransactionRow(transaction: Transaction, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ActivityScreen(state: AppUiState, onTransaction: (Transaction) -> Unit) {
+private fun ActivityScreen(
+    state: AppUiState,
+    onSettings: () -> Unit,
+    onTransaction: (Transaction) -> Unit
+) {
     var query by rememberSaveable { mutableStateOf("") }
     var mode by rememberSaveable { mutableStateOf(0) }
     var dateWindow by rememberSaveable { mutableStateOf(0) }
@@ -704,11 +740,10 @@ private fun ActivityScreen(state: AppUiState, onTransaction: (Transaction) -> Un
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item {
-            Text(
-                "Activity",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(top = 8.dp)
+            ScreenHeader(
+                title = "Activity",
+                subtitle = "See what actually happened",
+                onSettings = onSettings
             )
         }
         item {
@@ -761,7 +796,10 @@ private fun FilterChipRow(values: List<String>, selected: Int, onSelected: (Int)
 }
 
 @Composable
-private fun InsightsScreen(state: AppUiState) {
+private fun InsightsScreen(
+    state: AppUiState,
+    onSettings: () -> Unit
+) {
     var window by rememberSaveable { mutableStateOf(7) }
     val start = startOfDay(addDays(System.currentTimeMillis(), -(window - 1)))
     val income = FinancialCalculator.rangeIncome(state.transactions, start, System.currentTimeMillis())
@@ -780,10 +818,11 @@ private fun InsightsScreen(state: AppUiState) {
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Column(Modifier.padding(top = 8.dp)) {
-                Text("Insights", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
-                Text("See the patterns behind your money.", color = RunwayMuted)
-            }
+            ScreenHeader(
+                title = "Insights",
+                subtitle = "Understand your real spending",
+                onSettings = onSettings
+            )
         }
         item {
             FilterChipRow(
@@ -1498,6 +1537,7 @@ private fun EntryDialog(
 @Composable
 private fun PlanScreen(
     state: AppUiState,
+    onSettings: () -> Unit,
     onCreateOrEdit: () -> Unit,
     onTransaction: (Transaction) -> Unit
 ) {
@@ -1513,18 +1553,11 @@ private fun PlanScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Plan Tracking", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
-                    Text("What will happen to your money?", color = RunwayMuted)
-                }
-                IconButton(onClick = onCreateOrEdit) {
-                    Icon(
-                        if (active == null) Icons.Outlined.AutoGraph else Icons.Outlined.Edit,
-                        "Plan"
-                    )
-                }
-            }
+            ScreenHeader(
+                title = "Plan Tracking",
+                subtitle = "Plan what will happen to your money",
+                onSettings = onSettings
+            )
         }
 
         if (active == null) {

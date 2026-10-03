@@ -32,6 +32,7 @@ data class AppUiState(
     val name: String = "",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val preferencesLoaded: Boolean = false,
+    val dataLoaded: Boolean = false,
     val transactions: List<Transaction> = emptyList(),
     val plans: List<FinancialPlan> = emptyList(),
     val activePlan: FinancialPlan? = null,
@@ -98,11 +99,18 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                         plannedIncomes = incomes,
                         plannedExpenses = expenses,
                         categories = categories,
-                        loading = false
+                        loading = false,
+                        dataLoaded = true
                     )
                 }
             }.onFailure { error ->
-                _state.update { it.copy(loading = false, message = error.userMessage()) }
+                _state.update {
+                    it.copy(
+                        loading = false,
+                        dataLoaded = true,
+                        message = error.userMessage()
+                    )
+                }
             }
         }
     }
