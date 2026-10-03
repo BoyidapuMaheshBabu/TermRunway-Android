@@ -59,6 +59,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
+import com.termrunway.app.R
 import com.termrunway.app.data.Category
 import com.termrunway.app.ui.theme.RunwayBlue
 import com.termrunway.app.ui.theme.RunwayMuted
@@ -67,15 +69,11 @@ import com.termrunway.app.ui.theme.RunwayMint
 
 @Composable
 fun AppLogoMark(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.primary),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("R", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Black)
-            Box(Modifier.width(18.dp).height(2.dp).background(MaterialTheme.colorScheme.onPrimary))
-        }
-    }
+    androidx.compose.foundation.Image(
+        painter = painterResource(id = R.drawable.ic_launcher),
+        contentDescription = "TermRunway logo",
+        modifier = modifier
+    )
 }
 
 @Composable
