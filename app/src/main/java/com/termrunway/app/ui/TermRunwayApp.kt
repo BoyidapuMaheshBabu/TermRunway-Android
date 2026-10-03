@@ -178,6 +178,10 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
             existing = selectedTransaction,
             type = selectedTransaction?.type ?: TransactionType.EXPENSE,
             categories = state.categories,
+            activePlan = state.activePlan,
+            planIncomes = state.plannedIncomes,
+            planExpenses = state.plannedExpenses,
+            allTransactions = state.transactions,
             onBack = {
                 transactionOpen = false
                 selectedTransactionId = 0L
@@ -212,6 +216,9 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
             existingExpenses = state.plannedExpenses,
             expenseCategories = state.expenseCategories,
             onBack = { planEditorOpen = false },
+            onDelete = { id ->
+                viewModel.deletePlan(id) { planEditorOpen = false }
+            },
             onSave = { plan, income, expense ->
                 viewModel.savePlan(
                     existingId = state.activePlan?.id,
@@ -655,10 +662,12 @@ private fun TransactionRow(transaction: Transaction, onClick: () -> Unit) {
 private fun ActivityScreen(state: AppUiState, onTransaction: (Transaction) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var mode by rememberSaveable { mutableStateOf(0) }
-    var dateWindow by rememberSaveable { mutableStateOf(30) }
+    var dateWindow by rememberSaveable { mutableStateOf(0) }
 
     val filtered = remember(state.transactions, query, mode, dateWindow) {
-        val cutoff = startOfDay(addDays(System.currentTimeMillis(), -(dateWindow - 1)))
+        val cutoff = if (dateWindow > 0) {
+            startOfDay(addDays(System.currentTimeMillis(), -(dateWindow - 1)))
+        } else 0L
         state.transactions.filter { tx ->
             val modeMatch = when (mode) {
                 1 -> tx.type == TransactionType.INCOME
@@ -668,7 +677,7 @@ private fun ActivityScreen(state: AppUiState, onTransaction: (Transaction) -> Un
             val queryMatch = query.isBlank() ||
                 tx.category.contains(query, true) ||
                 tx.description.contains(query, true)
-            modeMatch && queryMatch && tx.dateMs >= cutoff
+            modeMatch && queryMatch && (dateWindow == 0 || tx.dateMs >= cutoff)
         }
     }
 
@@ -703,9 +712,9 @@ private fun ActivityScreen(state: AppUiState, onTransaction: (Transaction) -> Un
         }
         item {
             FilterChipRow(
-                values = listOf("7 days", "30 days", "90 days"),
-                selected = when (dateWindow) { 7 -> 0; 30 -> 1; else -> 2 },
-                onSelected = { dateWindow = listOf(7, 30, 90)[it] }
+                values = listOf("All time", "7 days", "30 days", "90 days"),
+                selected = when (dateWindow) { 0 -> 0; 7 -> 1; 30 -> 2; else -> 3 },
+                onSelected = { dateWindow = listOf(0, 7, 30, 90)[it] }
             )
         }
         if (filtered.isEmpty()) {
@@ -898,6 +907,10 @@ private fun TransactionEditorScreen(
     existing: Transaction?,
     type: TransactionType,
     categories: List<com.termrunway.app.data.Category>,
+    activePlan: FinancialPlan?,
+    planIncomes: List<PlannedIncome>,
+    planExpenses: List<PlannedExpense>,
+    allTransactions: List<Transaction>,
     onBack: () -> Unit,
     onSave: (Transaction) -> Unit,
     onDelete: (Long) -> Unit
@@ -911,6 +924,27 @@ private fun TransactionEditorScreen(
     var date by rememberSaveable(existing?.id) { mutableLongStateOf(existing?.dateMs ?: System.currentTimeMillis()) }
     var showDelete by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+
+    val previewTransaction = remember(currentType, amount, category, description, date, existing?.id) {
+        Transaction(
+            id = existing?.id ?: 0L,
+            type = currentType,
+            amountPaise = parseMoney(amount),
+            category = category,
+            description = description.trim(),
+            dateMs = date,
+            createdAtMs = existing?.createdAtMs ?: System.currentTimeMillis()
+        )
+    }
+    val previewMetrics = activePlan?.let { plan ->
+        val withoutExisting = if (existing == null) allTransactions else allTransactions.filter { it.id != existing.id }
+        FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = planIncomes,
+            plannedExpenses = planExpenses,
+            transactions = if (previewTransaction.amountPaise > 0) withoutExisting + previewTransaction else withoutExisting
+        )
+    }
 
     if (showDelete && existing != null) {
         AlertDialog(
@@ -1017,17 +1051,44 @@ private fun TransactionEditorScreen(
             }
             item {
                 Card(shape = RoundedCornerShape(20.dp)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(if (currentType == TransactionType.EXPENSE) "Impact" else "Credit", fontWeight = FontWeight.Bold)
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            if (currentType == TransactionType.EXPENSE) "Impact" else "Credit",
+                            fontWeight = FontWeight.Bold
+                        )
                         Text(
                             if (currentType == TransactionType.EXPENSE) {
                                 "This expense reduces your recorded balance."
                             } else {
                                 "This income increases your recorded balance."
                             },
-                            color = RunwayMuted,
-                            modifier = Modifier.padding(top = 4.dp)
+                            color = RunwayMuted
                         )
+                        if (previewMetrics != null && previewTransaction.amountPaise > 0) {
+                            HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                            Text("Plan preview", fontWeight = FontWeight.Bold)
+                            Row {
+                                Text("Remaining after this", Modifier.weight(1f))
+                                MoneyText(
+                                    previewMetrics.actualRemainingPaise,
+                                    color = if (previewMetrics.actualRemainingPaise >= 0) RunwayMint else RunwayRed
+                                )
+                            }
+                            if (previewMetrics.daysRemaining > 0) {
+                                Row {
+                                    Text("Available per remaining day", Modifier.weight(1f))
+                                    MoneyText(
+                                        previewMetrics.availablePerDayPaise,
+                                        color = if (previewMetrics.availablePerDayPaise >= 0) RunwayBlue else RunwayRed
+                                    )
+                                }
+                            }
+                            Text(
+                                previewMetrics.status + " · " + previewMetrics.guidance,
+                                color = RunwayMuted,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 }
             }
@@ -1064,6 +1125,7 @@ private fun PlanEditorScreen(
     existingExpenses: List<PlannedExpense>,
     expenseCategories: List<com.termrunway.app.data.Category>,
     onBack: () -> Unit,
+    onDelete: (Long) -> Unit,
     onSave: (FinancialPlan, List<PlannedIncome>, List<PlannedExpense>) -> Unit
 ) {
     var name by rememberSaveable(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
@@ -1078,6 +1140,7 @@ private fun PlanEditorScreen(
 
     var addIncomeDialog by rememberSaveable { mutableStateOf(false) }
     var addExpenseDialog by rememberSaveable { mutableStateOf(false) }
+    var showDelete by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
 
     val expectedIncome = incomes.sumOf { it.amountPaise }
@@ -1102,6 +1165,28 @@ private fun PlanEditorScreen(
                     )
                 }
                 addIncomeDialog = false
+            }
+        )
+    }
+
+
+    if (showDelete && existing != null) {
+        AlertDialog(
+            onDismissRequest = { showDelete = false },
+            title = { Text("Delete this plan?") },
+            text = {
+                Text("The plan and its expected income/expense entries will be removed. Actual transactions will remain untouched.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDelete = false
+                    onDelete(existing.id)
+                }) {
+                    Text("Delete", color = RunwayRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDelete = false }) { Text("Cancel") }
             }
         )
     }
@@ -1563,6 +1648,13 @@ private fun SettingsScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    if (existing != null) {
+                        IconButton(onClick = { showDelete = true }) {
+                            Icon(Icons.Outlined.Delete, "Delete plan", tint = RunwayRed)
+                        }
                     }
                 }
             )
