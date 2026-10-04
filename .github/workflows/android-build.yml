@@ -8,6 +8,7 @@ on:
       - feature/offline-v1-completion
       - feature/top-navigation-ui
       - feature/brand-theme-logo
+      - 'phase/**'
   pull_request:
     branches:
       - main
