@@ -130,6 +130,7 @@ import com.termrunway.app.data.*
 import com.termrunway.app.ui.components.*
 import com.termrunway.app.ui.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanEditorScreen(
     existing: FinancialPlan?,

@@ -130,7 +130,9 @@ import com.termrunway.app.ui.AppUiState
 import com.termrunway.app.ui.ThemeMode
 import com.termrunway.app.ui.TermRunwayViewModel
 import com.termrunway.app.ui.components.*
+import com.termrunway.app.ui.util.fileDate
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     state: AppUiState,

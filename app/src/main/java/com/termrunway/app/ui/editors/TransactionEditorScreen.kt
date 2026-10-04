@@ -131,6 +131,7 @@ import com.termrunway.app.ui.AppUiState
 import com.termrunway.app.ui.components.*
 import com.termrunway.app.ui.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionEditorScreen(
     existing: Transaction?,
@@ -347,4 +348,3 @@ fun TransactionEditorScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)

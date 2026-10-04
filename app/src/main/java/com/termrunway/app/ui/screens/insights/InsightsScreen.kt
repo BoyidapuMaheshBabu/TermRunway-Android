@@ -131,6 +131,7 @@ import com.termrunway.app.ui.components.*
 import com.termrunway.app.ui.util.addDays
 import com.termrunway.app.ui.util.startOfDay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InsightsScreen(
     state: AppUiState,
@@ -508,4 +509,3 @@ private fun CompareLine(label: String, expected: Long, actual: Long) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)

@@ -128,7 +128,7 @@ import kotlin.math.abs
 import kotlin.math.max
 
 @Composable
-private fun StartupScreen() {
+fun StartupScreen() {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -136,7 +136,7 @@ private fun StartupScreen() {
 }
 
 @Composable
-private fun WelcomeScreen(onSave: (String) -> Unit) {
+fun WelcomeScreen(onSave: (String) -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
 
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
