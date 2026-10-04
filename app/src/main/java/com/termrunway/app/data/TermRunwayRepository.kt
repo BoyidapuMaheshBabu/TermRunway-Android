@@ -1,167 +1,319 @@
 package com.termrunway.app.data
 
+import android.content.ContentValues
 import android.content.Context
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
-import java.util.UUID
+import android.database.Cursor
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class TermRunwayRepository(context: Context) {
-    private val file = File(context.filesDir, FILE_NAME)
+    private val database = TermRunwayDatabase(context.applicationContext)
 
-    @Synchronized
-    fun load(): AppData {
-        if (!file.exists()) return AppData()
-        return runCatching { decode(JSONObject(file.readText())).first }.getOrDefault(AppData())
-    }
-
-    @Synchronized
-    fun save(data: AppData) {
-        validate(data)
-        val temp = File(file.parentFile, "$FILE_NAME.tmp")
-        temp.writeText(encode(data).toString())
-        if (file.exists() && !file.delete()) {
-            temp.delete()
-            error("Could not replace local finance data.")
-        }
-        if (!temp.renameTo(file)) {
-            temp.inputStream().use { input ->
-                file.outputStream().use { output -> input.copyTo(output) }
+    suspend fun listTransactions(): List<Transaction> = withContext(Dispatchers.IO) {
+        database.readableDatabase.rawQuery(
+            "SELECT * FROM transactions ORDER BY date_ms DESC, id DESC", null
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(cursor.toTransaction())
             }
-            temp.delete()
         }
     }
 
-    fun exportJson(data: AppData): String {
-        validate(data)
-        return encode(data).toString(2)
+    suspend fun insertTransaction(transaction: Transaction) = withContext(Dispatchers.IO) {
+        TermRunwayDatabase.insertTransaction(database.writableDatabase, transaction)
     }
 
-    fun previewBackup(jsonText: String): BackupPreview {
-        val root = JSONObject(jsonText)
-        val appData = decode(root).first
-        return BackupPreview(
-            username = appData.username,
-            expenseCount = appData.expenses.size,
-            incomeCount = appData.incomes.size,
-            createdAtMillis = root.optLong("createdAtMillis", 0L)
+    suspend fun updateTransaction(transaction: Transaction) = withContext(Dispatchers.IO) {
+        TermRunwayDatabase.updateTransaction(database.writableDatabase, transaction)
+    }
+
+    suspend fun deleteTransaction(id: Long) = withContext(Dispatchers.IO) {
+        database.writableDatabase.delete("transactions", "id=?", arrayOf(id.toString()))
+    }
+
+    suspend fun listPlans(): List<FinancialPlan> = withContext(Dispatchers.IO) {
+        database.readableDatabase.rawQuery(
+            "SELECT * FROM plans ORDER BY start_ms DESC, id DESC", null
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(cursor.toPlan())
+            }
+        }
+    }
+
+    suspend fun createPlan(
+        plan: FinancialPlan,
+        plannedIncome: List<PlannedIncome>,
+        plannedExpenses: List<PlannedExpense>
+    ): Long = withContext(Dispatchers.IO) {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            val planId = db.insertOrThrow("plans", null, planValues(plan))
+            plannedIncome.forEach {
+                db.insertOrThrow("planned_income", null, incomeValues(it.copy(planId = planId)))
+            }
+            plannedExpenses.forEach {
+                db.insertOrThrow("planned_expense", null, expenseValues(it.copy(planId = planId)))
+            }
+            db.setTransactionSuccessful()
+            planId
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    suspend fun replacePlan(
+        plan: FinancialPlan,
+        plannedIncome: List<PlannedIncome>,
+        plannedExpenses: List<PlannedExpense>
+    ) = withContext(Dispatchers.IO) {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            db.update("plans", planValues(plan), "id=?", arrayOf(plan.id.toString()))
+            db.delete("planned_income", "plan_id=?", arrayOf(plan.id.toString()))
+            db.delete("planned_expense", "plan_id=?", arrayOf(plan.id.toString()))
+            plannedIncome.forEach {
+                db.insertOrThrow("planned_income", null, incomeValues(it.copy(id = 0, planId = plan.id)))
+            }
+            plannedExpenses.forEach {
+                db.insertOrThrow("planned_expense", null, expenseValues(it.copy(id = 0, planId = plan.id)))
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    suspend fun deletePlan(planId: Long) = withContext(Dispatchers.IO) {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("planned_income", "plan_id=?", arrayOf(planId.toString()))
+            db.delete("planned_expense", "plan_id=?", arrayOf(planId.toString()))
+            db.delete("plans", "id=?", arrayOf(planId.toString()))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    suspend fun planIncome(planId: Long): List<PlannedIncome> = withContext(Dispatchers.IO) {
+        database.readableDatabase.rawQuery(
+            "SELECT * FROM planned_income WHERE plan_id=? ORDER BY COALESCE(expected_date_ms, 0), id",
+            arrayOf(planId.toString())
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(cursor.toPlannedIncome())
+            }
+        }
+    }
+
+    suspend fun planExpenses(planId: Long): List<PlannedExpense> = withContext(Dispatchers.IO) {
+        database.readableDatabase.rawQuery(
+            "SELECT * FROM planned_expense WHERE plan_id=? ORDER BY COALESCE(expected_date_ms, 0), id",
+            arrayOf(planId.toString())
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(cursor.toPlannedExpense())
+            }
+        }
+    }
+
+    suspend fun listCategories(): List<Category> = withContext(Dispatchers.IO) {
+        database.readableDatabase.rawQuery(
+            "SELECT * FROM categories ORDER BY type, is_default DESC, name COLLATE NOCASE", null
+        ).use { cursor ->
+            buildList {
+                while (cursor.moveToNext()) add(cursor.toCategory())
+            }
+        }
+    }
+
+    suspend fun addCategory(name: String, type: CategoryType) = withContext(Dispatchers.IO) {
+        val clean = name.trim().take(32)
+        require(clean.length in 2..32) { "Category name must be between 2 and 32 characters." }
+        val values = ContentValues().apply {
+            put("name", clean)
+            put("type", type.name)
+            put("icon_key", "custom")
+            put("is_default", 0)
+        }
+        val result = database.writableDatabase.insertWithOnConflict(
+            "categories",
+            null,
+            values,
+            android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE
+        )
+        require(result != -1L) { "A category named '$clean' already exists for ${type.name.lowercase()}s." }
+    }
+
+    suspend fun deleteCustomCategory(id: Long) = withContext(Dispatchers.IO) {
+        database.writableDatabase.delete(
+            "categories",
+            "id=? AND is_default=0",
+            arrayOf(id.toString())
         )
     }
 
-    fun parseBackup(jsonText: String): AppData = decode(JSONObject(jsonText)).first
-
-    private fun encode(data: AppData): JSONObject {
-        val expenses = JSONArray()
-        data.expenses.forEach { expense ->
-            expenses.put(
-                JSONObject()
-                    .put("id", expense.id)
-                    .put("amountCents", expense.amountCents)
-                    .put("category", expense.category)
-                    .put("dateMillis", expense.dateMillis)
-                    .put("note", expense.note)
-            )
-        }
-
-        val incomes = JSONArray()
-        data.incomes.forEach { income ->
-            incomes.put(
-                JSONObject()
-                    .put("id", income.id)
-                    .put("amountCents", income.amountCents)
-                    .put("source", income.source)
-                    .put("dateMillis", income.dateMillis)
-                    .put("note", income.note)
-            )
-        }
-
-        return JSONObject()
-            .put("format", FORMAT)
-            .put("version", VERSION)
-            .put("createdAtMillis", System.currentTimeMillis())
-            .put(
-                "profile",
-                JSONObject()
-                    .put("username", data.username)
-                    .put("dailyLimitCents", data.dailyLimitCents)
-                    .put("theme", data.theme.name)
-            )
-            .put("expenses", expenses)
-            .put("incomes", incomes)
-    }
-
-    private fun decode(root: JSONObject): Pair<AppData, Long> {
-        require(root.optString("format") == FORMAT) { "Not a TermRunway backup." }
-        require(root.optInt("version", -1) == VERSION) { "Unsupported TermRunway backup version." }
-
-        val profile = root.optJSONObject("profile") ?: JSONObject()
-        val username = profile.optString("username").trim().take(MAX_USERNAME_LENGTH)
-        val dailyLimitCents = profile.optLong("dailyLimitCents", 0L)
-        require(dailyLimitCents >= 0L) { "Invalid daily limit." }
-
-        val theme = runCatching {
-            ThemeMode.valueOf(profile.optString("theme", ThemeMode.SYSTEM.name))
-        }.getOrElse { ThemeMode.SYSTEM }
-
-        val data = AppData(
-            username = username,
-            dailyLimitCents = dailyLimitCents,
-            theme = theme,
-            expenses = decodeExpenses(root.optJSONArray("expenses") ?: JSONArray()),
-            incomes = decodeIncomes(root.optJSONArray("incomes") ?: JSONArray())
+    suspend fun snapshot(name: String, themeMode: String): BackupSnapshot = withContext(Dispatchers.IO) {
+        val plans = listPlans()
+        BackupSnapshot(
+            schemaVersion = 1,
+            name = name,
+            themeMode = themeMode,
+            transactions = listTransactions(),
+            plans = plans,
+            plannedIncomes = plans.flatMap { planIncome(it.id) },
+            plannedExpenses = plans.flatMap { planExpenses(it.id) },
+            categories = listCategories()
         )
-        validate(data)
-        return data to root.optLong("createdAtMillis", 0L)
     }
 
-    private fun decodeExpenses(array: JSONArray): List<Expense> {
-        val seen = mutableSetOf<String>()
-        val result = mutableListOf<Expense>()
-        for (index in 0 until array.length()) {
-            val item = array.optJSONObject(index) ?: continue
-            val id = item.optString("id").trim().ifBlank { UUID.randomUUID().toString() }
-            val amount = item.optLong("amountCents", -1L)
-            val category = item.optString("category").trim()
-            val date = item.optLong("dateMillis", -1L)
-            val note = item.optString("note").trim().take(MAX_NOTE_LENGTH)
-            if (amount > 0L && category.isNotBlank() && date > 0L && seen.add(id)) {
-                result += Expense(id, amount, category, date, note)
+    suspend fun restore(snapshot: BackupSnapshot) = withContext(Dispatchers.IO) {
+        require(snapshot.schemaVersion == 1) { "Unsupported backup version" }
+        require(snapshot.name.length <= 40) { "Invalid user name" }
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("planned_income", null, null)
+            db.delete("planned_expense", null, null)
+            db.delete("transactions", null, null)
+            db.delete("plans", null, null)
+            db.delete("categories", null, null)
+
+            snapshot.categories.forEach { category ->
+                val values = ContentValues().apply {
+                    put("name", category.name)
+                    put("type", category.type.name)
+                    put("icon_key", category.iconKey)
+                    put("is_default", if (category.isDefault) 1 else 0)
+                }
+                db.insertWithOnConflict("categories", null, values, android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE)
             }
-        }
-        return result
-    }
 
-    private fun decodeIncomes(array: JSONArray): List<Income> {
-        val seen = mutableSetOf<String>()
-        val result = mutableListOf<Income>()
-        for (index in 0 until array.length()) {
-            val item = array.optJSONObject(index) ?: continue
-            val id = item.optString("id").trim().ifBlank { UUID.randomUUID().toString() }
-            val amount = item.optLong("amountCents", -1L)
-            val source = item.optString("source").trim()
-            val date = item.optLong("dateMillis", -1L)
-            val note = item.optString("note").trim().take(MAX_NOTE_LENGTH)
-            if (amount > 0L && source.isNotBlank() && date > 0L && seen.add(id)) {
-                result += Income(id, amount, source, date, note)
+            snapshot.transactions.forEach { TermRunwayDatabase.insertTransaction(db, it) }
+
+            val planIdMap = mutableMapOf<Long, Long>()
+            snapshot.plans.forEach { plan ->
+                val newId = db.insertOrThrow("plans", null, planValues(plan))
+                planIdMap[plan.id] = newId
             }
+            snapshot.plannedIncomes.forEach { item ->
+                val newPlanId = planIdMap[item.planId] ?: return@forEach
+                db.insertOrThrow(
+                    "planned_income",
+                    null,
+                    incomeValues(item.copy(id = 0, planId = newPlanId))
+                )
+            }
+            snapshot.plannedExpenses.forEach { item ->
+                val newPlanId = planIdMap[item.planId] ?: return@forEach
+                db.insertOrThrow(
+                    "planned_expense",
+                    null,
+                    expenseValues(item.copy(id = 0, planId = newPlanId))
+                )
+            }
+
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
         }
-        return result
     }
 
-    private fun validate(data: AppData) {
-        require(data.dailyLimitCents >= 0L)
-        require(data.username.length <= MAX_USERNAME_LENGTH)
-        require(data.expenses.all { it.amountCents > 0L && it.category.isNotBlank() && it.dateMillis > 0L && it.note.length <= MAX_NOTE_LENGTH })
-        require(data.incomes.all { it.amountCents > 0L && it.source.isNotBlank() && it.dateMillis > 0L && it.note.length <= MAX_NOTE_LENGTH })
-        require(data.expenses.map { it.id }.distinct().size == data.expenses.size)
-        require(data.incomes.map { it.id }.distinct().size == data.incomes.size)
+    suspend fun clearAll() = withContext(Dispatchers.IO) {
+        val db = database.writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("planned_income", null, null)
+            db.delete("planned_expense", null, null)
+            db.delete("transactions", null, null)
+            db.delete("plans", null, null)
+            db.delete("categories", null, null)
+            seedCategories(db)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 
-    private companion object {
-        const val FILE_NAME = "termrunway_data.json"
-        const val FORMAT = "termrunway-backup"
-        const val VERSION = 1
-        const val MAX_USERNAME_LENGTH = 32
-        const val MAX_NOTE_LENGTH = 120
+    private fun seedCategories(db: android.database.sqlite.SQLiteDatabase) {
+        DefaultCategories.all.forEach { category ->
+            db.insert("categories", null, ContentValues().apply {
+                put("name", category.name)
+                put("type", category.type.name)
+                put("icon_key", category.iconKey)
+                put("is_default", 1)
+            })
+        }
     }
+
+    private fun planValues(plan: FinancialPlan) = ContentValues().apply {
+        put("name", plan.name)
+        put("start_ms", plan.startMs)
+        put("end_ms", plan.endMs)
+        put("starting_money_paise", plan.startingMoneyPaise)
+        put("created_at_ms", plan.createdAtMs)
+    }
+
+    private fun incomeValues(item: PlannedIncome) = ContentValues().apply {
+        put("plan_id", item.planId)
+        put("source", item.source)
+        put("amount_paise", item.amountPaise)
+        if (item.expectedDateMs == null) putNull("expected_date_ms") else put("expected_date_ms", item.expectedDateMs)
+    }
+
+    private fun expenseValues(item: PlannedExpense) = ContentValues().apply {
+        put("plan_id", item.planId)
+        put("category", item.category)
+        put("amount_paise", item.amountPaise)
+        if (item.expectedDateMs == null) putNull("expected_date_ms") else put("expected_date_ms", item.expectedDateMs)
+        put("frequency", item.frequency)
+    }
+
+    private fun Cursor.toTransaction() = Transaction(
+        id = getLong(getColumnIndexOrThrow("id")),
+        type = TransactionType.valueOf(getString(getColumnIndexOrThrow("type"))),
+        amountPaise = getLong(getColumnIndexOrThrow("amount_paise")),
+        category = getString(getColumnIndexOrThrow("category")),
+        description = getString(getColumnIndexOrThrow("description")),
+        dateMs = getLong(getColumnIndexOrThrow("date_ms")),
+        createdAtMs = getLong(getColumnIndexOrThrow("created_at_ms"))
+    )
+
+    private fun Cursor.toPlan() = FinancialPlan(
+        id = getLong(getColumnIndexOrThrow("id")),
+        name = getString(getColumnIndexOrThrow("name")),
+        startMs = getLong(getColumnIndexOrThrow("start_ms")),
+        endMs = getLong(getColumnIndexOrThrow("end_ms")),
+        startingMoneyPaise = getLong(getColumnIndexOrThrow("starting_money_paise")),
+        createdAtMs = getLong(getColumnIndexOrThrow("created_at_ms"))
+    )
+
+    private fun Cursor.toPlannedIncome() = PlannedIncome(
+        id = getLong(getColumnIndexOrThrow("id")),
+        planId = getLong(getColumnIndexOrThrow("plan_id")),
+        source = getString(getColumnIndexOrThrow("source")),
+        amountPaise = getLong(getColumnIndexOrThrow("amount_paise")),
+        expectedDateMs = if (isNull(getColumnIndexOrThrow("expected_date_ms"))) null else getLong(getColumnIndexOrThrow("expected_date_ms"))
+    )
+
+    private fun Cursor.toPlannedExpense() = PlannedExpense(
+        id = getLong(getColumnIndexOrThrow("id")),
+        planId = getLong(getColumnIndexOrThrow("plan_id")),
+        category = getString(getColumnIndexOrThrow("category")),
+        amountPaise = getLong(getColumnIndexOrThrow("amount_paise")),
+        expectedDateMs = if (isNull(getColumnIndexOrThrow("expected_date_ms"))) null else getLong(getColumnIndexOrThrow("expected_date_ms")),
+        frequency = getString(getColumnIndexOrThrow("frequency"))
+    )
+
+    private fun Cursor.toCategory() = Category(
+        id = getLong(getColumnIndexOrThrow("id")),
+        name = getString(getColumnIndexOrThrow("name")),
+        type = CategoryType.valueOf(getString(getColumnIndexOrThrow("type"))),
+        iconKey = getString(getColumnIndexOrThrow("icon_key")),
+        isDefault = getInt(getColumnIndexOrThrow("is_default")) == 1
+    )
 }
