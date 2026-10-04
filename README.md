@@ -1,3 +1,11 @@
+<p align="center">
+  <img
+    src="docs/termrunway-logo.jpeg"
+    alt="TermRunway — Plan, Calculate, Achieve"
+    width="650"
+  />
+</p>
+
 # TermRunway 1.0.0
 
 Your money. Your semester. Your runway.
