@@ -16,6 +16,7 @@ import com.termrunway.app.data.TermRunwayRepository
 import com.termrunway.app.data.Transaction
 import com.termrunway.app.data.TransactionType
 import com.termrunway.app.domain.FinancialCalculator
+import com.termrunway.app.ui.mode.TrackingMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,9 +29,16 @@ private val android.content.Context.termRunwayDataStore by preferencesDataStore(
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
+private data class StoredPreferences(
+    val name: String,
+    val themeMode: ThemeMode,
+    val trackingMode: TrackingMode
+)
+
 data class AppUiState(
     val name: String = "",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val trackingMode: TrackingMode = TrackingMode.DAILY,
     val preferencesLoaded: Boolean = false,
     val dataLoaded: Boolean = false,
     val transactions: List<Transaction> = emptyList(),
@@ -61,18 +69,21 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             preferences.data.map { prefs ->
-                val name = prefs[NAME_KEY].orEmpty()
-                val theme = when (prefs[THEME_KEY]) {
-                    "light" -> ThemeMode.LIGHT
-                    "dark" -> ThemeMode.DARK
-                    else -> ThemeMode.SYSTEM
-                }
-                name to theme
-            }.collect { (name, theme) ->
+                StoredPreferences(
+                    name = prefs[NAME_KEY].orEmpty(),
+                    themeMode = when (prefs[THEME_KEY]) {
+                        "light" -> ThemeMode.LIGHT
+                        "dark" -> ThemeMode.DARK
+                        else -> ThemeMode.SYSTEM
+                    },
+                    trackingMode = TrackingMode.fromStorageValue(prefs[TRACKING_MODE_KEY])
+                )
+            }.collect { stored ->
                 _state.update {
                     it.copy(
-                        name = name,
-                        themeMode = theme,
+                        name = stored.name,
+                        themeMode = stored.themeMode,
+                        trackingMode = stored.trackingMode,
                         preferencesLoaded = true
                     )
                 }
@@ -127,6 +138,15 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(themeMode = mode) }
         viewModelScope.launch {
             preferences.edit { it[THEME_KEY] = mode.name.lowercase() }
+        }
+    }
+
+    fun setTrackingMode(mode: TrackingMode) {
+        if (_state.value.trackingMode == mode) return
+
+        _state.update { it.copy(trackingMode = mode) }
+        viewModelScope.launch {
+            preferences.edit { it[TRACKING_MODE_KEY] = mode.storageValue }
         }
     }
 
@@ -330,6 +350,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                 preferences.edit { prefs ->
                     prefs.remove(NAME_KEY)
                     prefs[THEME_KEY] = "system"
+                    prefs.remove(TRACKING_MODE_KEY)
                 }
             }.onSuccess {
                 refresh()
@@ -374,5 +395,6 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     companion object {
         private val NAME_KEY = stringPreferencesKey("name")
         private val THEME_KEY = stringPreferencesKey("theme")
+        private val TRACKING_MODE_KEY = stringPreferencesKey("tracking_mode")
     }
 }

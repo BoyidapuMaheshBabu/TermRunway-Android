@@ -67,6 +67,7 @@ import com.termrunway.app.ui.theme.RunwayBlue
 import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
 import com.termrunway.app.ui.theme.RunwayMint
+import com.termrunway.app.ui.mode.TrackingMode
 
 @Composable
 fun AppLogoMark(modifier: Modifier = Modifier) {
@@ -130,13 +131,23 @@ fun MetricPill(label: String, value: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ModeToggle(selectedPlan: Boolean, onChange: (Boolean) -> Unit) {
+fun ModeToggle(selectedMode: TrackingMode, onChange: (TrackingMode) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        FilterChip(selected = !selectedPlan, onClick = { onChange(false) }, label = { Text("Daily Tracking") }, modifier = Modifier.weight(1f))
-        FilterChip(selected = selectedPlan, onClick = { onChange(true) }, label = { Text("Plan Tracking") }, modifier = Modifier.weight(1f))
+        FilterChip(
+            selected = selectedMode == TrackingMode.DAILY,
+            onClick = { onChange(TrackingMode.DAILY) },
+            label = { Text("Daily Tracking") },
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            selected = selectedMode == TrackingMode.PLAN,
+            onClick = { onChange(TrackingMode.PLAN) },
+            label = { Text("Plan Tracking") },
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 

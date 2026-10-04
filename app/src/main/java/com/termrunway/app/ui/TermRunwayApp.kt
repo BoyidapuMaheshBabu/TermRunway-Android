@@ -121,6 +121,7 @@ import com.termrunway.app.ui.theme.RunwayBlue
 import com.termrunway.app.ui.theme.RunwayMint
 import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
+import com.termrunway.app.ui.mode.TrackingMode
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.abs
@@ -159,7 +160,6 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
     var transactionOpen by rememberSaveable { mutableStateOf(false) }
     var selectedTransactionId by rememberSaveable { mutableLongStateOf(0L) }
     var planEditorOpen by rememberSaveable { mutableStateOf(false) }
-    var planMode by rememberSaveable { mutableStateOf(false) }
     val selectedTransaction = state.transactions.firstOrNull { it.id == selectedTransactionId }
 
     if (settingsOpen) {
@@ -295,9 +295,9 @@ fun TermRunwayApp(viewModel: TermRunwayViewModel) {
             when (tab) {
                 RootTab.HOME -> HomeScreen(
                     state = state,
-                    planMode = planMode,
+                    trackingMode = state.trackingMode,
                     onSettings = { settingsOpen = true },
-                    onPlanMode = { planMode = it },
+                    onTrackingMode = viewModel::setTrackingMode,
                     onAdd = { transactionOpen = true },
                     onTransaction = {
                         selectedTransactionId = it.id
@@ -409,9 +409,9 @@ private fun ScreenHeader(
 @Composable
 private fun HomeScreen(
     state: AppUiState,
-    planMode: Boolean,
+    trackingMode: TrackingMode,
     onSettings: () -> Unit,
-    onPlanMode: (Boolean) -> Unit,
+    onTrackingMode: (TrackingMode) -> Unit,
     onAdd: () -> Unit,
     onTransaction: (Transaction) -> Unit,
     onPlanEdit: () -> Unit
@@ -455,9 +455,9 @@ private fun HomeScreen(
             }
         }
 
-        item { ModeToggle(selectedPlan = planMode, onChange = onPlanMode) }
+        item { ModeToggle(selectedMode = trackingMode, onChange = onTrackingMode) }
 
-        if (!planMode) {
+        if (trackingMode == TrackingMode.DAILY) {
             item {
                 MainBalanceCard(
                     balance = state.balancePaise,
