@@ -79,10 +79,12 @@ data class PlanMetrics(
 
 object DefaultCategories {
     val income = listOf(
-        Category(name = "Parents", type = CategoryType.INCOME, iconKey = "family"),
+        Category(name = "Parents / Allowance", type = CategoryType.INCOME, iconKey = "family"),
         Category(name = "Scholarship", type = CategoryType.INCOME, iconKey = "school"),
         Category(name = "Part-time", type = CategoryType.INCOME, iconKey = "work"),
         Category(name = "Freelance", type = CategoryType.INCOME, iconKey = "laptop"),
+        Category(name = "Gift", type = CategoryType.INCOME, iconKey = "gift"),
+        Category(name = "Interest", type = CategoryType.INCOME, iconKey = "chart"),
         Category(name = "Other", type = CategoryType.INCOME, iconKey = "wallet")
     )
 
@@ -91,7 +93,9 @@ object DefaultCategories {
         Category(name = "Transport", type = CategoryType.EXPENSE, iconKey = "transport"),
         Category(name = "Education", type = CategoryType.EXPENSE, iconKey = "education"),
         Category(name = "Bills", type = CategoryType.EXPENSE, iconKey = "bills"),
+        Category(name = "Shopping", type = CategoryType.EXPENSE, iconKey = "shopping"),
         Category(name = "Entertainment", type = CategoryType.EXPENSE, iconKey = "entertainment"),
+        Category(name = "Subscriptions", type = CategoryType.EXPENSE, iconKey = "subscriptions"),
         Category(name = "Personal", type = CategoryType.EXPENSE, iconKey = "personal"),
         Category(name = "Other", type = CategoryType.EXPENSE, iconKey = "other")
     )

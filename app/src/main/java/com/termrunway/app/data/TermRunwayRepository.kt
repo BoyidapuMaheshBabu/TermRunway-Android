@@ -132,15 +132,21 @@ class TermRunwayRepository(context: Context) {
     }
 
     suspend fun addCategory(name: String, type: CategoryType) = withContext(Dispatchers.IO) {
-        val clean = name.trim()
-        require(clean.length in 2..32)
+        val clean = name.trim().take(32)
+        require(clean.length in 2..32) { "Category name must be between 2 and 32 characters." }
         val values = ContentValues().apply {
             put("name", clean)
             put("type", type.name)
             put("icon_key", "custom")
             put("is_default", 0)
         }
-        database.writableDatabase.insertOrThrow("categories", null, values)
+        val result = database.writableDatabase.insertWithOnConflict(
+            "categories",
+            null,
+            values,
+            android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE
+        )
+        require(result != -1L) { "A category named '$clean' already exists for ${type.name.lowercase()}s." }
     }
 
     suspend fun deleteCustomCategory(id: Long) = withContext(Dispatchers.IO) {
@@ -167,7 +173,7 @@ class TermRunwayRepository(context: Context) {
 
     suspend fun restore(snapshot: BackupSnapshot) = withContext(Dispatchers.IO) {
         require(snapshot.schemaVersion == 1) { "Unsupported backup version" }
-        require(snapshot.name.length <= 60) { "Invalid user name" }
+        require(snapshot.name.length <= 40) { "Invalid user name" }
         val db = database.writableDatabase
         db.beginTransaction()
         try {
@@ -178,12 +184,13 @@ class TermRunwayRepository(context: Context) {
             db.delete("categories", null, null)
 
             snapshot.categories.forEach { category ->
-                db.insertOrThrow("categories", null, ContentValues().apply {
+                val values = ContentValues().apply {
                     put("name", category.name)
                     put("type", category.type.name)
                     put("icon_key", category.iconKey)
                     put("is_default", if (category.isDefault) 1 else 0)
-                })
+                }
+                db.insertWithOnConflict("categories", null, values, android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE)
             }
 
             snapshot.transactions.forEach { TermRunwayDatabase.insertTransaction(db, it) }

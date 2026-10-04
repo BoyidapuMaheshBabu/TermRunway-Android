@@ -185,7 +185,7 @@ fun WelcomeScreen(onSave: (String) -> Unit) {
             Spacer(Modifier.height(24.dp))
             OutlinedTextField(
                 value = name,
-                onValueChange = { if (it.length <= 60) name = it },
+                onValueChange = { name = it.take(40) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .bringIntoViewRequester(bringIntoViewRequester)

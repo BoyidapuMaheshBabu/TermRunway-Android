@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
 class TermRunwayDatabase(context: Context) :
-    SQLiteOpenHelper(context, "termrunway.db", null, 1) {
+    SQLiteOpenHelper(context, "termrunway.db", null, 2) {
 
     override fun onConfigure(db: SQLiteDatabase) {
         super.onConfigure(db)
@@ -63,26 +63,51 @@ class TermRunwayDatabase(context: Context) :
         db.execSQL("""
             CREATE TABLE categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
                 type TEXT NOT NULL,
                 icon_key TEXT NOT NULL,
-                is_default INTEGER NOT NULL DEFAULT 0
+                is_default INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(type, name)
             )
         """.trimIndent())
 
         seedCategories(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            db.execSQL("""
+                CREATE TABLE categories_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    icon_key TEXT NOT NULL,
+                    is_default INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(type, name)
+                )
+            """.trimIndent())
+
+            db.execSQL("""
+                INSERT OR IGNORE INTO categories_new (id, name, type, icon_key, is_default)
+                SELECT id, name, type, icon_key, is_default FROM categories
+            """.trimIndent())
+
+            db.execSQL("DROP TABLE categories")
+            db.execSQL("ALTER TABLE categories_new RENAME TO categories")
+
+            seedCategories(db)
+        }
+    }
 
     private fun seedCategories(db: SQLiteDatabase) {
         DefaultCategories.all.forEach { category ->
-            db.insert("categories", null, ContentValues().apply {
+            val values = ContentValues().apply {
                 put("name", category.name)
                 put("type", category.type.name)
                 put("icon_key", category.iconKey)
                 put("is_default", 1)
-            })
+            }
+            db.insertWithOnConflict("categories", null, values, SQLiteDatabase.CONFLICT_IGNORE)
         }
     }
 

@@ -221,7 +221,8 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
                     transactionOpen = false
                     selectedTransactionId = 0L
                 }
-            }
+            },
+            onAddCategory = viewModel::addCategory
         )
         return
     }

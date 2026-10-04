@@ -2,6 +2,8 @@ package com.termrunway.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -215,15 +217,29 @@ fun EmptyState(title: String, description: String, action: String? = null, onAct
 }
 
 @Composable
-fun CategorySelector(categories: List<Category>, selected: String, onSelected: (String) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(categories.size) { index ->
-            val category = categories[index]
+fun CategorySelector(
+    categories: List<Category>,
+    selected: String,
+    onAddCategory: (() -> Unit)? = null,
+    onSelected: (String) -> Unit
+) {
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        categories.forEach { category ->
             FilterChip(
                 selected = category.name == selected,
                 onClick = { onSelected(category.name) },
                 label = { Text(category.name) },
                 leadingIcon = { Icon(iconForCategory(category.name), null) }
+            )
+        }
+        if (onAddCategory != null) {
+            AssistChip(
+                onClick = onAddCategory,
+                label = { Text("+ Add category") },
+                leadingIcon = { Icon(Icons.Outlined.Add, null) }
             )
         }
     }
@@ -234,9 +250,10 @@ fun iconForCategory(category: String): ImageVector = when (category.lowercase())
     "transport" -> Icons.Outlined.DirectionsBus
     "education" -> Icons.Outlined.School
     "bills" -> Icons.Outlined.ReceiptLong
+    "shopping" -> Icons.Outlined.ShoppingBag
     "entertainment" -> Icons.Outlined.MoreHoriz
     "personal" -> Icons.Outlined.Person
-    "parents" -> Icons.Outlined.FamilyRestroom
+    "parents", "parents / allowance" -> Icons.Outlined.FamilyRestroom
     "scholarship" -> Icons.Outlined.Savings
     "part-time" -> Icons.Outlined.Work
     "freelance" -> Icons.Outlined.Laptop

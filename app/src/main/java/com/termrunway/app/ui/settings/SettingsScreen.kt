@@ -137,6 +137,7 @@ import com.termrunway.app.ui.ThemeMode
 import com.termrunway.app.ui.TermRunwayViewModel
 import com.termrunway.app.ui.components.*
 import com.termrunway.app.ui.util.fileDate
+import com.termrunway.app.ui.util.sanitizeFilename
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,6 +167,9 @@ fun SettingsScreen(
 
     if (addCategory) {
         var value by rememberSaveable { mutableStateOf("") }
+        val existingSameType = remember(categoryType, state.categories) {
+            state.categories.filter { it.type == categoryType }.map { it.name.trim().lowercase() }
+        }
         AlertDialog(
             onDismissRequest = { addCategory = false },
             title = { Text("Add category") },
@@ -177,8 +181,8 @@ fun SettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedTextField(
-                        value,
-                        { value = it },
+                        value = value,
+                        onValueChange = { value = it.take(32) },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Category name") },
                         singleLine = true,
@@ -205,7 +209,7 @@ fun SettingsScreen(
                         onAddCategory(value, categoryType)
                         addCategory = false
                     },
-                    enabled = value.trim().length >= 2
+                    enabled = value.trim().length in 2..32 && !existingSameType.contains(value.trim().lowercase())
                 ) { Text("Add") }
             },
             dismissButton = { TextButton(onClick = { addCategory = false }) { Text("Cancel") } }
@@ -261,7 +265,7 @@ fun SettingsScreen(
                 ) {
                     OutlinedTextField(
                         value = editName,
-                        onValueChange = { editName = it.take(60) },
+                        onValueChange = { editName = it.take(40) },
                         modifier = Modifier.weight(1f),
                         label = { Text("Name") },
                         singleLine = true,
@@ -321,7 +325,7 @@ fun SettingsScreen(
                     "Export backup",
                     "Save a complete JSON copy of your local data."
                 ) {
-                    createBackup.launch("TermRunway_Backup_" + fileDate() + ".json")
+                    createBackup.launch(sanitizeFilename(state.name, "json"))
                 }
             }
             item {

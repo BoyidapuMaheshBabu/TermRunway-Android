@@ -7,6 +7,8 @@ import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -148,7 +150,8 @@ fun TransactionEditorScreen(
     allTransactions: List<Transaction>,
     onBack: () -> Unit,
     onSave: (Transaction) -> Unit,
-    onDelete: (Long) -> Unit
+    onDelete: (Long) -> Unit,
+    onAddCategory: (String, CategoryType) -> Unit
 ) {
     var currentType by rememberSaveable(existing?.id) { mutableStateOf(existing?.type ?: type) }
     var amount by rememberSaveable(existing?.id) { mutableStateOf(existing?.amountPaise?.let(::moneyInput) ?: "") }
@@ -158,6 +161,7 @@ fun TransactionEditorScreen(
     var description by rememberSaveable(existing?.id) { mutableStateOf(existing?.description.orEmpty()) }
     var date by rememberSaveable(existing?.id) { mutableLongStateOf(existing?.dateMs ?: System.currentTimeMillis()) }
     var showDelete by rememberSaveable { mutableStateOf(false) }
+    var showAddCategoryDialog by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
@@ -201,6 +205,54 @@ fun TransactionEditorScreen(
         categories.filter { it.type == CategoryType.INCOME }
     } else {
         categories.filter { it.type == CategoryType.EXPENSE }
+    }
+
+    if (showAddCategoryDialog) {
+        var newCatName by rememberSaveable { mutableStateOf("") }
+        val existingNames = remember(currentType, activeCategories) {
+            activeCategories.map { it.name.trim().lowercase() }
+        }
+        AlertDialog(
+            onDismissRequest = { showAddCategoryDialog = false },
+            title = {
+                Text("Add ${if (currentType == TransactionType.INCOME) "income" else "expense"} category")
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = newCatName,
+                        onValueChange = { newCatName = it.take(32) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Category name") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val clean = newCatName.trim()
+                        if (clean.length in 2..32 && !existingNames.contains(clean.lowercase())) {
+                            val catType = if (currentType == TransactionType.INCOME) CategoryType.INCOME else CategoryType.EXPENSE
+                            onAddCategory(clean, catType)
+                            category = clean
+                            showAddCategoryDialog = false
+                        }
+                    },
+                    enabled = newCatName.trim().length in 2..32 && !existingNames.contains(newCatName.trim().lowercase())
+                ) { Text("Add category") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddCategoryDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 
     Scaffold(
@@ -268,7 +320,12 @@ fun TransactionEditorScreen(
             item {
                 Text("Category", fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(6.dp))
-                CategorySelector(activeCategories, category) { category = it }
+                CategorySelector(
+                    categories = activeCategories,
+                    selected = category,
+                    onAddCategory = { showAddCategoryDialog = true },
+                    onSelected = { category = it }
+                )
             }
             item {
                 OutlinedTextField(

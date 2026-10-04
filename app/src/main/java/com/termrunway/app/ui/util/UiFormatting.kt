@@ -183,4 +183,15 @@ fun moneyInput(paise: Long): String =
 fun fileDate(): String =
     java.text.SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(java.util.Date())
 
+fun sanitizeFilename(userName: String, extension: String = "json"): String {
+    val date = fileDate()
+    val cleanName = userName
+        .replace(Regex("[/\\\\:*?\"<>|]"), " ")
+        .replace(Regex("\\s+"), "_")
+        .trim('_')
+        .take(40)
+        .ifEmpty { "User" }
+    return "TermRunway_${cleanName}_$date.$extension"
+}
+
 private const val DAY = 86_400_000L
