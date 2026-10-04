@@ -6,42 +6,170 @@
   />
 </p>
 
-# TermRunway 1.0.0
+<h1 align="center">TermRunway 1.0.0 🛫💸</h1>
 
-Your money. Your semester. Your runway.
+<p align="center">
+  <strong>Your money. Your semester. Your runway.</strong><br>
+  An offline-first Android app for student financial tracking and semester planning.
+</p>
 
-TermRunway is an offline-first native Android student-finance application with two core modes.
+<p align="center">
+  <a href="https://github.com/BoyidapuMaheshBabu/TermRunway-Product">Product Knowledge</a> ·
+  <a href="https://github.com/BoyidapuMaheshBabu/TermRunway-Web">Original Web Prototype</a>
+</p>
 
-Daily Tracking answers "What happened?"
-- Record income and expenses.
-- Review daily, weekly and monthly activity.
-- Search and filter transactions.
-- View spending by category.
-- View a simple spending trend.
+---
 
-Plan Tracking answers "What will happen?"
-- Select a custom plan period.
-- Record money already available at the start.
-- Add expected income.
-- Add planned expenses.
-- See expected remaining money while planning.
-- Compare actual plan-period activity against the plan.
-- Calculate remaining money per day.
-- Show contextual spending-pace guidance.
+## 🚦 Product at a Glance
 
-Architecture:
-Jetpack Compose -> ViewModel -> FinancialCalculator / Repository -> Local SQLite
-Small preferences -> DataStore
-Backup/restore -> Android Storage Access Framework + JSON
+| | |
+|---|---|
+| 📱 Platform | Native Android |
+| 🧩 UI | Kotlin + Jetpack Compose + Material 3 |
+| 🔐 Data | Local / privacy-focused |
+| 📡 Core connectivity | Offline |
+| 👤 Account | None required |
+| ☁️ Backend / cloud | Not required |
+| 🏦 Bank connection | None |
+| 💰 Currency safety | Integer paise internally |
+| 🧪 Validation | Unit tests + physical-device testing |
+| 🔢 Version | **1.0.0** |
 
-The product is deliberately offline. It requests only the user's name and does not require an account, backend, bank connection, cloud sync, internet permission or financial API.
+## 🧭 Two Modes, One Financial Reality
 
-Financial data uses integer paise internally to avoid floating-point currency errors.
+### 💸 Daily Tracking — *What happened?*
 
-TermRunway is developed as an evolving product based on its full product definition, with each phase building on the previous stable checkpoint.
+- Record income and expenses
+- Review daily, weekly and monthly activity
+- Search and filter transactions
+- View spending by category
+- View simple spending trends
 
-AI is used as a development accelerator and learning assistant. Product decisions, testing and final engineering judgment remain part of the project workflow.
+### 🗓️ Plan Tracking — *What will happen?*
 
-GitHub Actions validates the debug build and unit tests for configured branches and pull requests.
+- Choose a custom planning period
+- Record money available at the start
+- Add expected income
+- Add planned expenses
+- See expected remaining money while planning
+- Compare actual activity with the plan
+- Calculate remaining money per day
+- Receive contextual spending-pace guidance
 
-Developer: Boyidapu Mahesh Babu
+> **The plan is connected to the same underlying transaction reality — not a separate calculator.**
+
+## 🏗️ Architecture
+
+```
+Jetpack Compose
+      ↓
+ViewModel
+      ↓
+FinancialCalculator / Repository
+      ↓
+Local SQLite
+
+Small preferences → DataStore
+
+Backup / Restore
+      ↓
+Android Storage Access Framework
+      ↓
+JSON
+```
+
+### 💰 Financial correctness
+
+Money values are represented internally as **integer paise** to avoid floating-point currency errors.
+
+### 🔒 Privacy by design
+
+TermRunway is deliberately offline-first:
+
+- no account
+- no backend
+- no cloud sync
+- no bank connection
+- no financial API
+- no required internet connection
+
+The app collects only the user's name for the local experience.
+
+## 🧪 Development & Validation
+
+TermRunway follows:
+
+**Problem → Research → Decide → Document → Phase → Build → Test → Review → Improve**
+
+AI is used as a **development accelerator and learning assistant** for implementation, debugging, research, documentation and exploration.
+
+> **AI accelerates the work. Product decisions, testing and final engineering judgment remain human-owned.**
+
+Validation includes configured **GitHub Actions** checks for debug builds and unit tests, plus testing on physical Android devices.
+
+## 🗂️ Product Knowledge
+
+The implementation is supported by a separate product repository:
+
+👉 [TermRunway-Product](https://github.com/BoyidapuMaheshBabu/TermRunway-Product)
+
+It preserves:
+
+- product context
+- UX and architecture research
+- durable decisions
+- development phases
+- roadmap
+- product rules
+- AI handoff guidance
+- documentation policy
+
+**Product repository = why / what**  
+**Android repository = how / implementation**
+
+## 🛠️ Development Approach
+
+The project is built around:
+
+```
+Understand
+   ↓
+Decide
+   ↓
+Build
+   ↓
+Validate
+   ↓
+Improve
+```
+
+Quality is prioritized over speed, and real-device behavior matters more than a successful build alone.
+
+## 📈 Project Evolution
+
+```
+Web Prototype
+     ↓
+Build + Test
+     ↓
+Identify Product Limitations
+     ↓
+Reconsider Architecture
+     ↓
+Native Android Product
+     ↓
+V1 Finalization
+```
+
+The original web implementation is preserved as a historical prototype:
+
+👉 [TermRunway-Web](https://github.com/BoyidapuMaheshBabu/TermRunway-Web)
+
+## 👨‍💻 Developer
+
+**Boyidapu Mahesh Babu**  
+Diploma in Computer Science Engineering student
+
+---
+
+> **Understand first. Build deliberately. Test the real product. Improve continuously. 🚀**
