@@ -7,12 +7,17 @@ import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -152,6 +157,7 @@ fun SettingsScreen(
         if (uri != null) onRestore(uri)
     }
 
+    val focusManager = LocalFocusManager.current
     var editName by rememberSaveable { mutableStateOf(state.name) }
     var addCategory by rememberSaveable { mutableStateOf(false) }
     var clearConfirm by rememberSaveable { mutableStateOf(false) }
@@ -163,13 +169,20 @@ fun SettingsScreen(
             onDismissRequest = { addCategory = false },
             title = { Text("Add category") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     OutlinedTextField(
                         value,
                         { value = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text("Category name") },
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
@@ -226,10 +239,15 @@ fun SettingsScreen(
                     }
                 }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets.safeDrawing
     ) { padding ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .imePadding()
+                .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(bottom = 30.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -244,7 +262,9 @@ fun SettingsScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Name") },
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
             }
             item {

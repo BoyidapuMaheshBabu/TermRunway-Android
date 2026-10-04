@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -154,6 +158,7 @@ fun TransactionEditorScreen(
     var date by rememberSaveable(existing?.id) { mutableLongStateOf(existing?.dateMs ?: System.currentTimeMillis()) }
     var showDelete by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
 
     val previewTransaction = remember(currentType, amount, category, description, date, existing?.id) {
         Transaction(
@@ -214,10 +219,15 @@ fun TransactionEditorScreen(
                     }
                 }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets.safeDrawing
     ) { padding ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .imePadding()
+                .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -251,7 +261,7 @@ fun TransactionEditorScreen(
                     label = { Text("Amount (₹)") },
                     singleLine = true,
                     leadingIcon = { Text("₹", fontWeight = FontWeight.Bold) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next)
                 )
             }
             item {
@@ -266,7 +276,9 @@ fun TransactionEditorScreen(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Description (optional)") },
                     minLines = 2,
-                    maxLines = 3
+                    maxLines = 3,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
             }
             item {

@@ -7,12 +7,17 @@ import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -226,6 +231,8 @@ fun PlanEditorScreen(
         )
     }
 
+    val focusManager = LocalFocusManager.current
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -234,10 +241,15 @@ fun PlanEditorScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, "Back") }
                 }
             )
-        }
+        },
+        contentWindowInsets = WindowInsets.safeDrawing
     ) { padding ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .imePadding()
+                .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(13.dp)
         ) {
@@ -248,7 +260,8 @@ fun PlanEditorScreen(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Plan name") },
                     placeholder = { Text("5th Semester") },
-                    singleLine = true
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
             }
             item {
@@ -272,7 +285,8 @@ fun PlanEditorScreen(
                     label = { Text("Money available now (₹)") },
                     supportingText = { Text("Money already in hand at the beginning of the plan.") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
                 )
             }
             item {
@@ -432,14 +446,20 @@ private fun EntryDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
                 if (categoryChoices.isEmpty()) {
                     OutlinedTextField(
                         name,
                         { name = it },
                         modifier = Modifier.fillMaxWidth(),
                         label = { Text(nameLabel) },
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                     )
                 } else {
                     Box {
@@ -472,7 +492,7 @@ private fun EntryDialog(
                     { amountText = it.filter { c -> c.isDigit() || c == '.' } },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Amount (₹)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
                     singleLine = true
                 )
             }

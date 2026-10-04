@@ -127,6 +127,13 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
+
 @Composable
 fun StartupScreen() {
     Surface(
@@ -138,42 +145,61 @@ fun StartupScreen() {
 @Composable
 fun WelcomeScreen(onSave: (String) -> Unit) {
     var name by rememberSaveable { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(
-            Modifier.fillMaxSize().padding(horizontal = 26.dp, vertical = 40.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+    Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .imePadding(),
+            contentAlignment = Alignment.Center
         ) {
-            AppLogoMark(Modifier.fillMaxWidth().height(150.dp))
-            Spacer(Modifier.height(24.dp))
-            Text(
-                "Welcome to TermRunway",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Understand what happened to your money today, and plan what happens next.",
-                color = RunwayMuted,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(30.dp))
-            OutlinedTextField(
-                value = name,
-                onValueChange = { if (it.length <= 60) name = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Your name") },
-                supportingText = { Text("TermRunway keeps your financial data on this device.") },
-                singleLine = true
-            )
-            Spacer(Modifier.height(16.dp))
-            Button(
-                onClick = { onSave(name.trim()) },
-                enabled = name.trim().isNotEmpty(),
-                modifier = Modifier.fillMaxWidth().height(54.dp)
-            ) { Text("Start using TermRunway", fontWeight = FontWeight.Bold) }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 26.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                AppLogoMark(Modifier.fillMaxWidth().height(140.dp))
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    "Welcome to TermRunway",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Understand what happened to your money today, and plan what happens next.",
+                    color = RunwayMuted,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(24.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { if (it.length <= 60) name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Your name") },
+                    supportingText = { Text("TermRunway keeps your financial data on this device.") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        focusManager.clearFocus()
+                        onSave(name.trim())
+                    },
+                    enabled = name.trim().isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth().height(54.dp)
+                ) { Text("Start using TermRunway", fontWeight = FontWeight.Bold) }
+            }
         }
     }
 }
