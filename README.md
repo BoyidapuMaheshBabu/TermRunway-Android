@@ -1,12 +1,39 @@
-# TermRunway 1.0.0 — Reference UI Build
+# TermRunway 1.0.0
 
-Fresh native Android / Kotlin / Jetpack Compose implementation.
+Your money. Your semester. Your runway.
 
-Completely offline: only the user's name is requested. Financial data is stored locally on-device.
+TermRunway is an offline-first native Android student-finance application with two core modes.
 
-Daily Tracking answers "What happened?".
-Plan Tracking answers "What will happen?" using dates, available money, expected income, expected expenses, live plan math, runway, and plan-vs-actual.
+Daily Tracking answers "What happened?"
+- Record income and expenses.
+- Review daily, weekly and monthly activity.
+- Search and filter transactions.
+- View spending by category.
+- View a simple spending trend.
 
-This branch is a clean UI-reference build and intentionally does not reuse the previous screen source tree.
+Plan Tracking answers "What will happen?"
+- Select a custom plan period.
+- Record money already available at the start.
+- Add expected income.
+- Add planned expenses.
+- See expected remaining money while planning.
+- Compare actual plan-period activity against the plan.
+- Calculate remaining money per day.
+- Show contextual spending-pace guidance.
 
-Build validation is handled by .github/workflows/android-build.yml.
+Architecture:
+Jetpack Compose -> ViewModel -> FinancialCalculator / Repository -> Local SQLite
+Small preferences -> DataStore
+Backup/restore -> Android Storage Access Framework + JSON
+
+The product is deliberately offline. It requests only the user's name and does not require an account, backend, bank connection, cloud sync, internet permission or financial API.
+
+Financial data uses integer paise internally to avoid floating-point currency errors.
+
+The branch is a clean rebuild based on the full TermRunway product definition rather than a comparison with the previous screen implementation.
+
+AI is used as a development accelerator and learning assistant. Product decisions, testing and final engineering judgment remain part of the project workflow.
+
+GitHub Actions validates the debug build and unit tests on the termrunway branch.
+
+Developer: Boyidapu Mahesh Babu
