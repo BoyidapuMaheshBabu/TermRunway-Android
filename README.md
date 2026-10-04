@@ -38,10 +38,10 @@ The product is deliberately offline. It requests only the user's name and does n
 
 Financial data uses integer paise internally to avoid floating-point currency errors.
 
-The branch is a clean rebuild based on the full TermRunway product definition rather than a comparison with the previous screen implementation.
+TermRunway is developed as an evolving product based on its full product definition, with each phase building on the previous stable checkpoint.
 
 AI is used as a development accelerator and learning assistant. Product decisions, testing and final engineering judgment remain part of the project workflow.
 
-GitHub Actions validates the debug build and unit tests on the termrunway branch.
+GitHub Actions validates the debug build and unit tests for configured branches and pull requests.
 
 Developer: Boyidapu Mahesh Babu
