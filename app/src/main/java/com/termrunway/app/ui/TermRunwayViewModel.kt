@@ -1,6 +1,7 @@
 package com.termrunway.app.ui
 
 import android.app.Application
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -32,13 +33,15 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 private data class StoredPreferences(
     val name: String,
     val themeMode: ThemeMode,
-    val trackingMode: TrackingMode
+    val trackingMode: TrackingMode,
+    val onboardingCompleted: Boolean
 )
 
 data class AppUiState(
     val name: String = "",
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val trackingMode: TrackingMode = TrackingMode.DAILY,
+    val onboardingCompleted: Boolean = false,
     val preferencesLoaded: Boolean = false,
     val dataLoaded: Boolean = false,
     val transactions: List<Transaction> = emptyList(),
@@ -69,14 +72,17 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     init {
         viewModelScope.launch {
             preferences.data.map { prefs ->
+                val storedName = prefs[NAME_KEY].orEmpty()
+                val onboardingDone = prefs[ONBOARDING_KEY] ?: storedName.isNotBlank()
                 StoredPreferences(
-                    name = prefs[NAME_KEY].orEmpty(),
+                    name = storedName,
                     themeMode = when (prefs[THEME_KEY]) {
                         "light" -> ThemeMode.LIGHT
                         "dark" -> ThemeMode.DARK
                         else -> ThemeMode.SYSTEM
                     },
-                    trackingMode = TrackingMode.fromStorageValue(prefs[TRACKING_MODE_KEY])
+                    trackingMode = TrackingMode.fromStorageValue(prefs[TRACKING_MODE_KEY]),
+                    onboardingCompleted = onboardingDone
                 )
             }.collect { stored ->
                 _state.update {
@@ -84,6 +90,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                         name = stored.name,
                         themeMode = stored.themeMode,
                         trackingMode = stored.trackingMode,
+                        onboardingCompleted = stored.onboardingCompleted,
                         preferencesLoaded = true
                     )
                 }
@@ -126,9 +133,22 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun completeOnboarding(value: String) {
+        val clean = value.trim()
+        if (clean.isEmpty()) return
+        _state.update { it.copy(name = clean, onboardingCompleted = true) }
+        viewModelScope.launch {
+            preferences.edit {
+                it[NAME_KEY] = clean.take(60)
+                it[ONBOARDING_KEY] = true
+            }
+        }
+    }
+
     fun setName(value: String) {
         val clean = value.trim()
-        _state.update { it.copy(name = value) }
+        if (clean.isEmpty()) return
+        _state.update { it.copy(name = clean) }
         viewModelScope.launch {
             preferences.edit { it[NAME_KEY] = clean.take(60) }
         }
@@ -351,10 +371,18 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                     prefs.remove(NAME_KEY)
                     prefs[THEME_KEY] = "system"
                     prefs.remove(TRACKING_MODE_KEY)
+                    prefs.remove(ONBOARDING_KEY)
                 }
             }.onSuccess {
                 refresh()
-                _state.update { it.copy(busy = false, message = "All local data cleared.") }
+                _state.update {
+                    it.copy(
+                        busy = false,
+                        name = "",
+                        onboardingCompleted = false,
+                        message = "All local data cleared."
+                    )
+                }
                 onDone()
             }.onFailure { error ->
                 _state.update { it.copy(busy = false, message = error.userMessage()) }
@@ -396,5 +424,6 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         private val NAME_KEY = stringPreferencesKey("name")
         private val THEME_KEY = stringPreferencesKey("theme")
         private val TRACKING_MODE_KEY = stringPreferencesKey("tracking_mode")
+        private val ONBOARDING_KEY = booleanPreferencesKey("onboarding_completed")
     }
 }

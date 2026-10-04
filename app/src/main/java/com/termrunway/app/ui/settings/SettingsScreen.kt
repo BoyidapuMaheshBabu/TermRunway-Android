@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
@@ -240,7 +241,7 @@ fun SettingsScreen(
                 }
             )
         },
-        contentWindowInsets = WindowInsets.safeDrawing
+        contentWindowInsets = WindowInsets.systemBars
     ) { padding ->
         LazyColumn(
             Modifier
@@ -253,19 +254,40 @@ fun SettingsScreen(
         ) {
             item { Text("Profile", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
             item {
-                OutlinedTextField(
-                    editName,
-                    {
-                        val next = it.take(60)
-                        editName = next
-                        onName(next)
-                    },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Name") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() })
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it.take(60) },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Name") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            if (editName.trim().isNotBlank() && editName.trim() != state.name) {
+                                onName(editName.trim())
+                                focusManager.clearFocus()
+                            } else {
+                                focusManager.clearFocus()
+                            }
+                        })
+                    )
+                    Button(
+                        onClick = {
+                            if (editName.trim().isNotBlank()) {
+                                onName(editName.trim())
+                                focusManager.clearFocus()
+                            }
+                        },
+                        enabled = editName.trim().isNotBlank() && editName.trim() != state.name,
+                        modifier = Modifier.height(56.dp)
+                    ) {
+                        Text("Save")
+                    }
+                }
             }
             item {
                 Text(

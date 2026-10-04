@@ -163,8 +163,8 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
         return
     }
 
-    if (state.name.isBlank()) {
-        WelcomeScreen(onSave = viewModel::setName)
+    if (!state.onboardingCompleted) {
+        WelcomeScreen(onSave = viewModel::completeOnboarding)
         return
     }
 
