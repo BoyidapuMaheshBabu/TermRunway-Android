@@ -140,7 +140,7 @@ object FinancialCalculator {
         )
     }
 
-    private fun startOfDay(ms: Long): Long =
+    fun startOfDay(ms: Long): Long =
         Calendar.getInstance().apply {
             timeInMillis = ms
             set(Calendar.HOUR_OF_DAY, 0)
@@ -149,14 +149,14 @@ object FinancialCalculator {
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
 
-    private fun endOfDay(ms: Long): Long = startOfDay(ms) + DAY - 1
+    fun endOfDay(ms: Long): Long = startOfDay(ms) + DAY - 1
 
-    private fun daysInclusive(startMs: Long, endMs: Long): Int {
+    fun daysInclusive(startMs: Long, endMs: Long): Int {
         if (endMs < startMs) return 0
         return (((startOfDay(endMs) - startOfDay(startMs)) / DAY) + 1).toInt()
     }
 
-    private fun sameDay(a: Long, b: Long): Boolean = startOfDay(a) == startOfDay(b)
+    fun sameDay(a: Long, b: Long): Boolean = startOfDay(a) == startOfDay(b)
 
     private fun formatDay(ms: Long): String =
         java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())

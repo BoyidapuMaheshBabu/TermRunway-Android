@@ -194,4 +194,41 @@ fun sanitizeFilename(userName: String, extension: String = "json"): String {
     return "TermRunway_${cleanName}_$date.$extension"
 }
 
+enum class PeriodPreset(val label: String) {
+    DAYS_7("7 days"),
+    DAYS_30("30 days"),
+    DAYS_90("90 days"),
+    ACTIVE_PLAN("Active plan"),
+    ALL_TIME("All time"),
+    CUSTOM("Custom range")
+}
+
+data class DatePeriodRange(
+    val startMs: Long?,
+    val endMs: Long?
+)
+
+fun resolvePeriodRange(
+    preset: PeriodPreset,
+    activePlan: FinancialPlan?,
+    customStartMs: Long,
+    customEndMs: Long,
+    todayMs: Long = System.currentTimeMillis()
+): DatePeriodRange {
+    return when (preset) {
+        PeriodPreset.DAYS_7 -> DatePeriodRange(startOfDay(addDays(todayMs, -6)), endOfDay(todayMs))
+        PeriodPreset.DAYS_30 -> DatePeriodRange(startOfDay(addDays(todayMs, -29)), endOfDay(todayMs))
+        PeriodPreset.DAYS_90 -> DatePeriodRange(startOfDay(addDays(todayMs, -89)), endOfDay(todayMs))
+        PeriodPreset.ACTIVE_PLAN -> {
+            if (activePlan != null) {
+                DatePeriodRange(startOfDay(activePlan.startMs), endOfDay(activePlan.endMs))
+            } else {
+                DatePeriodRange(startOfDay(addDays(todayMs, -29)), endOfDay(todayMs))
+            }
+        }
+        PeriodPreset.ALL_TIME -> DatePeriodRange(null, null)
+        PeriodPreset.CUSTOM -> DatePeriodRange(startOfDay(minOf(customStartMs, customEndMs)), endOfDay(maxOf(customStartMs, customEndMs)))
+    }
+}
+
 private const val DAY = 86_400_000L
