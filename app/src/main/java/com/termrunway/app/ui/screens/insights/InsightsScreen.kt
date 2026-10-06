@@ -1,26 +1,18 @@
 package com.termrunway.app.ui.screens.insights
 
-import android.app.DatePickerDialog
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
-import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,58 +21,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Analytics
-import androidx.compose.material.icons.outlined.ArrowDownward
-import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.AutoGraph
-import androidx.compose.material.icons.outlined.Backup
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.NightsStay
-import androidx.compose.material.icons.outlined.Restore
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material.icons.outlined.Wallet
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -91,45 +47,32 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.termrunway.app.data.CategoryType
-import com.termrunway.app.data.FinancialPlan
-import com.termrunway.app.data.PlannedExpense
-import com.termrunway.app.data.PlannedIncome
 import com.termrunway.app.data.Transaction
 import com.termrunway.app.data.TransactionType
 import com.termrunway.app.domain.FinancialCalculator
+import com.termrunway.app.ui.AppUiState
 import com.termrunway.app.ui.components.AmountCard
-import com.termrunway.app.ui.components.AppLogoMark
-import com.termrunway.app.ui.components.CategorySelector
 import com.termrunway.app.ui.components.EmptyState
-import com.termrunway.app.ui.components.ModeToggle
-import com.termrunway.app.ui.components.MoneyText
-import com.termrunway.app.ui.components.ProgressAmountBar
-import com.termrunway.app.ui.components.QuickAddCard
+import com.termrunway.app.ui.components.ScreenHeader
 import com.termrunway.app.ui.components.SectionTitle
-import com.termrunway.app.ui.components.TransactionIcon
 import com.termrunway.app.ui.components.dateLabel
 import com.termrunway.app.ui.components.moneyString
-import com.termrunway.app.ui.components.todayLabel
-import com.termrunway.app.ui.theme.RunwayBlue
 import com.termrunway.app.ui.theme.RunwayMint
 import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
-import com.termrunway.app.ui.mode.TrackingMode
-import java.util.Calendar
+import com.termrunway.app.ui.util.PeriodPreset
+import com.termrunway.app.ui.util.addDays
+import com.termrunway.app.ui.util.endOfDay
+import com.termrunway.app.ui.util.pickDate
+import com.termrunway.app.ui.util.resolvePeriodRange
+import com.termrunway.app.ui.util.startOfDay
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
-import com.termrunway.app.ui.AppUiState
-import com.termrunway.app.ui.components.*
-import com.termrunway.app.ui.util.addDays
-import com.termrunway.app.ui.util.startOfDay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,15 +80,37 @@ fun InsightsScreen(
     state: AppUiState,
     onSettings: () -> Unit
 ) {
-    var window by rememberSaveable { mutableStateOf(7) }
-    val start = startOfDay(addDays(System.currentTimeMillis(), -(window - 1)))
-    val income = FinancialCalculator.rangeIncome(state.transactions, start, System.currentTimeMillis())
-    val expense = FinancialCalculator.rangeExpense(state.transactions, start, System.currentTimeMillis())
+    val context = LocalContext.current
+    var selectedPreset by rememberSaveable { mutableStateOf(PeriodPreset.DAYS_7) }
+    var customStartMs by rememberSaveable { mutableLongStateOf(addDays(System.currentTimeMillis(), -30)) }
+    var customEndMs by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+
+    val periodChoices = remember(state.activePlan) {
+        buildList {
+            add(PeriodPreset.DAYS_7)
+            add(PeriodPreset.DAYS_30)
+            add(PeriodPreset.DAYS_90)
+            if (state.activePlan != null) {
+                add(PeriodPreset.ACTIVE_PLAN)
+            }
+            add(PeriodPreset.CUSTOM)
+        }
+    }
+
+    val resolvedRange = remember(selectedPreset, state.activePlan, customStartMs, customEndMs) {
+        resolvePeriodRange(selectedPreset, state.activePlan, customStartMs, customEndMs)
+    }
+
+    val startMs = resolvedRange.startMs ?: startOfDay(addDays(System.currentTimeMillis(), -365))
+    val endMs = resolvedRange.endMs ?: endOfDay(System.currentTimeMillis())
+
+    val income = FinancialCalculator.rangeIncome(state.transactions, startMs, endMs)
+    val expense = FinancialCalculator.rangeExpense(state.transactions, startMs, endMs)
     val categories = FinancialCalculator.categoryTotals(
         state.transactions,
         TransactionType.EXPENSE,
-        start,
-        System.currentTimeMillis()
+        startMs,
+        endMs
     )
     val maxCategory = categories.values.maxOrNull()?.coerceAtLeast(1) ?: 1
 
@@ -162,11 +127,32 @@ fun InsightsScreen(
             )
         }
         item {
-            FilterChipRow(
-                values = listOf("7 days", "30 days", "90 days"),
-                selected = when (window) { 7 -> 0; 30 -> 1; else -> 2 },
-                onSelected = { window = listOf(7, 30, 90)[it] }
-            )
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                periodChoices.forEach { preset ->
+                    FilterChip(
+                        selected = selectedPreset == preset,
+                        onClick = { selectedPreset = preset },
+                        label = { Text(preset.label) }
+                    )
+                }
+            }
+        }
+        if (selectedPreset == PeriodPreset.CUSTOM) {
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { pickDate(context, customStartMs) { customStartMs = it } },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("From: " + dateLabel(customStartMs), maxLines = 1) }
+                    OutlinedButton(
+                        onClick = { pickDate(context, customEndMs) { customEndMs = it } },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("To: " + dateLabel(customEndMs), maxLines = 1) }
+                }
+            }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
@@ -181,8 +167,8 @@ fun InsightsScreen(
                     Spacer(Modifier.height(10.dp))
                     MoneyPulseChart(
                         transactions = state.transactions,
-                        startMs = start,
-                        windowDays = window
+                        startMs = startMs,
+                        endMs = endMs
                     )
                 }
             }
@@ -225,6 +211,7 @@ fun InsightsScreen(
         }
     }
 }
+
 private data class MoneyPulsePoint(
     val label: String,
     val incomePaise: Long,
@@ -235,32 +222,34 @@ private data class MoneyPulsePoint(
 private fun MoneyPulseChart(
     transactions: List<Transaction>,
     startMs: Long,
-    windowDays: Int
+    endMs: Long
 ) {
-    val rawDays = windowDays.coerceIn(7, 90)
-    val points = if (rawDays == 7) {
-        (0 until rawDays).map { offset ->
-            val day = addDays(startMs, offset)
-            MoneyPulsePoint(
-                label = if (offset == rawDays - 1) "Today" else java.text.SimpleDateFormat("dd MMM", Locale.getDefault()).format(java.util.Date(day)),
-                incomePaise = FinancialCalculator.dayIncome(transactions, day),
-                expensePaise = FinancialCalculator.dayExpense(transactions, day)
-            )
-        }
-    } else {
-        val weeks = (rawDays + 6) / 7
-        (0 until weeks).map { week ->
-            val weekStart = addDays(startMs, week * 7)
-            val length = minOf(7, rawDays - week * 7)
-            MoneyPulsePoint(
-                label = java.text.SimpleDateFormat("dd MMM", Locale.getDefault()).format(java.util.Date(weekStart)),
-                incomePaise = (0 until length).sumOf { offset ->
-                    FinancialCalculator.dayIncome(transactions, addDays(weekStart, offset))
-                },
-                expensePaise = (0 until length).sumOf { offset ->
-                    FinancialCalculator.dayExpense(transactions, addDays(weekStart, offset))
-                }
-            )
+    val totalDays = FinancialCalculator.daysInclusive(startMs, endMs).coerceIn(1, 365)
+    val points = remember(transactions, startMs, endMs, totalDays) {
+        if (totalDays <= 14) {
+            (0 until totalDays).map { offset ->
+                val day = addDays(startMs, offset)
+                MoneyPulsePoint(
+                    label = if (FinancialCalculator.sameDay(day, System.currentTimeMillis())) "Today" else SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(day)),
+                    incomePaise = FinancialCalculator.dayIncome(transactions, day),
+                    expensePaise = FinancialCalculator.dayExpense(transactions, day)
+                )
+            }
+        } else {
+            val weeks = (totalDays + 6) / 7
+            (0 until weeks).map { week ->
+                val weekStart = addDays(startMs, week * 7)
+                val length = minOf(7, totalDays - week * 7)
+                MoneyPulsePoint(
+                    label = SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(weekStart)),
+                    incomePaise = (0 until length).sumOf { offset ->
+                        FinancialCalculator.dayIncome(transactions, addDays(weekStart, offset))
+                    },
+                    expensePaise = (0 until length).sumOf { offset ->
+                        FinancialCalculator.dayExpense(transactions, addDays(weekStart, offset))
+                    }
+                )
+            }
         }
     }
 
@@ -268,13 +257,13 @@ private fun MoneyPulseChart(
     val totalExpensePaise = points.sumOf { it.expensePaise }
     val highestPaise = points.maxOfOrNull { maxOf(it.incomePaise, it.expensePaise) } ?: 0L
     val highestPoint = points.maxByOrNull { maxOf(it.incomePaise, it.expensePaise) }
-    val averageIncomePaise = totalIncomePaise / rawDays.toLong().coerceAtLeast(1L)
-    val averageExpensePaise = totalExpensePaise / rawDays.toLong().coerceAtLeast(1L)
+    val averageIncomePaise = totalIncomePaise / totalDays.toLong().coerceAtLeast(1L)
+    val averageExpensePaise = totalExpensePaise / totalDays.toLong().coerceAtLeast(1L)
     val chartMaxPaise = highestPaise.coerceAtLeast(1L)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            if (rawDays == 7) "Actual cash flow · each pair is one day" else "Actual cash flow · grouped by week for readability",
+            if (totalDays <= 14) "Actual cash flow · each pair is one day" else "Actual cash flow · grouped by week for readability",
             style = MaterialTheme.typography.bodySmall,
             color = RunwayMuted
         )
@@ -424,7 +413,7 @@ private fun MoneyPulseChart(
 }
 
 @Composable
-private fun MoneyPulseLegend(label: String, indicator: androidx.compose.ui.graphics.Color) {
+private fun MoneyPulseLegend(label: String, indicator: Color) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         Box(
             Modifier.size(9.dp).clip(CircleShape).background(indicator)
@@ -508,4 +497,3 @@ private fun CompareLine(label: String, expected: Long, actual: Long) {
         )
     }
 }
-
