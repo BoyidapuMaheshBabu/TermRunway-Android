@@ -1,5 +1,6 @@
 package com.termrunway.app.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,11 +10,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoGraph
 import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -21,7 +20,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.termrunway.app.data.FinancialPlan
 import com.termrunway.app.data.PlanMetrics
@@ -30,7 +31,6 @@ import com.termrunway.app.ui.theme.RunwayMint
 import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlanHeroCard(
     plan: FinancialPlan,
@@ -54,21 +54,115 @@ fun PlanHeroCard(
                 IconButton(onClick = onEdit) { Icon(Icons.Outlined.Edit, "Edit plan") }
             }
             if (metrics != null) {
-                Text("Actual remaining", color = RunwayMuted, style = MaterialTheme.typography.labelLarge)
-                MoneyText(
-                    metrics.actualRemainingPaise,
-                    color = if (metrics.actualRemainingPaise >= 0) RunwayMint else RunwayRed
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AssistChip(onClick = {}, label = { Text(metrics.status) })
-                    AssistChip(onClick = {}, label = { Text("${metrics.daysRemaining} days left") })
-                }
                 ProgressAmountBar(
                     value = metrics.actualExpensePaise,
                     maxValue = (metrics.actualExpensePaise + metrics.actualRemainingPaise.coerceAtLeast(0)).coerceAtLeast(1),
-                    label = "Money used"
+                    label = "Runway money used"
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun PlanSummaryGrid(
+    metrics: PlanMetrics,
+    modifier: Modifier = Modifier,
+    onIncomeClick: (() -> Unit)? = null,
+    onExpenseClick: (() -> Unit)? = null,
+    onSafeToSpendClick: (() -> Unit)? = null,
+    onRemainingDaysClick: (() -> Unit)? = null
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            PlanGridCard(
+                label = "Income",
+                primaryResult = "${moneyString(metrics.actualIncomePaise)} / ${moneyString(metrics.totalExpectedIncomePaise)}",
+                supportingText = "actual / expected",
+                primaryColor = RunwayMint,
+                onClick = onIncomeClick,
+                modifier = Modifier.weight(1f)
+            )
+            PlanGridCard(
+                label = "Expenses",
+                primaryResult = "${moneyString(metrics.actualExpensePaise)} / ${moneyString(metrics.totalPlannedExpensePaise)}",
+                supportingText = "actual / planned",
+                primaryColor = RunwayRed,
+                onClick = onExpenseClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            PlanGridCard(
+                label = "Safe to Spend Today",
+                primaryResult = moneyString(metrics.safeToSpendTodayPaise),
+                supportingText = "current runway guidance",
+                primaryColor = if (metrics.safeToSpendTodayPaise > 0) RunwayBlue else RunwayRed,
+                onClick = onSafeToSpendClick,
+                modifier = Modifier.weight(1f)
+            )
+            PlanGridCard(
+                label = "Remaining Days",
+                primaryResult = "${metrics.daysRemaining} days",
+                supportingText = "in this plan",
+                onClick = onRemainingDaysClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun PlanGridCard(
+    label: String,
+    primaryResult: String,
+    supportingText: String,
+    modifier: Modifier = Modifier,
+    primaryColor: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: (() -> Unit)? = null
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = RunwayMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = primaryResult,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = primaryColor,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = supportingText,
+                style = MaterialTheme.typography.labelSmall,
+                color = RunwayMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -87,7 +181,8 @@ fun GuidanceCard(metrics: PlanMetrics) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
             Icon(Icons.Outlined.AutoGraph, null, tint = color)
             Column(Modifier.padding(start = 12.dp)) {
-                Text(metrics.status, fontWeight = FontWeight.Bold)
+                Text("Plan Status", style = MaterialTheme.typography.labelSmall, color = RunwayMuted)
+                Text(metrics.status, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                 Text(metrics.guidance, color = RunwayMuted, modifier = Modifier.padding(top = 4.dp))
             }
         }

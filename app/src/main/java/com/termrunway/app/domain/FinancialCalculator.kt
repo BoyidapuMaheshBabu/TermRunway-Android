@@ -92,7 +92,7 @@ object FinancialCalculator {
 
         val variance = actualExpense - expectedSpendToDate
         val averageSpend = if (elapsedDays > 0) actualExpense / elapsedDays else 0L
-        val availablePerDay = if (remainingDays > 0) actualRemaining / remainingDays else 0L
+        val availablePerDay = if (remainingDays > 0) max(0L, actualRemaining) / remainingDays else 0L
 
         val threshold = max(50_000L, expectedSpendToDate / 5L)
         val status = when {
@@ -106,19 +106,19 @@ object FinancialCalculator {
 
         val guidance = when {
             todayMs < plan.startMs ->
-                "Your plan starts on ${formatDay(plan.startMs)}. Add expected income and expenses before it begins."
+                "Your plan starts on ${formatDay(plan.startMs)}. Review your expected income and planned expenses."
             todayMs > plan.endMs ->
-                "This plan has ended. Review actual spending against what you originally expected."
+                "This plan has ended. Final actual remaining: ${money(actualRemaining)}."
             actualRemaining < 0 ->
-                "Recorded plan spending is above the money currently available in this plan."
+                "Recorded plan spending is above available money. Safe to spend today: ₹0. Review your remaining money and planned expenses."
             remainingDays == 0 ->
-                "The plan ends today. Your remaining amount is the amount to carry forward or review."
+                "The plan ends today. Remaining runway is ${money(actualRemaining)}."
             variance > threshold ->
-                "Spending is currently ahead of the pace set by your plan. Your remaining daily amount is ${money(availablePerDay)}."
+                "Spending is currently above the pace expected by your plan. Suggested safe spending today is ${money(availablePerDay)}."
             variance < -threshold ->
-                "Spending is currently below the pace set by your plan. Your remaining daily amount is ${money(availablePerDay)}."
+                "Spending is currently below the pace expected by your plan. Suggested safe spending today is ${money(availablePerDay)}."
             else ->
-                "Your spending pace is close to the plan. You currently have about ${money(availablePerDay)} available per remaining day."
+                "Your spending pace matches your plan. Suggested safe spending today is ${money(availablePerDay)}."
         }
 
         return PlanMetrics(

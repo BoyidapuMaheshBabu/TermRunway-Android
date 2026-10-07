@@ -40,12 +40,12 @@ import com.termrunway.app.ui.components.AmountCard
 import com.termrunway.app.ui.components.EmptyState
 import com.termrunway.app.ui.components.GuidanceCard
 import com.termrunway.app.ui.components.MoneyText
+import com.termrunway.app.ui.components.PlanSummaryGrid
 import com.termrunway.app.ui.components.QuickAddCard
 import com.termrunway.app.ui.components.SectionTitle
 import com.termrunway.app.ui.components.TransactionRow
 import com.termrunway.app.ui.components.dateLabel
 import com.termrunway.app.ui.components.todayLabel
-import com.termrunway.app.ui.theme.RunwayBlue
 import com.termrunway.app.ui.theme.RunwayMint
 import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
@@ -194,22 +194,13 @@ fun HomeScreen(
                 )
             }
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-                    AmountCard(
-                        "Remaining runway",
-                        metrics.actualRemainingPaise,
-                        if (metrics.actualRemainingPaise >= 0) RunwayMint else RunwayRed,
-                        Modifier.weight(1f),
-                        supporting = "${metrics.daysRemaining} days remaining"
-                    )
-                    AmountCard(
-                        "Available per day",
-                        metrics.availablePerDayPaise,
-                        if (metrics.availablePerDayPaise >= 0) RunwayBlue else RunwayRed,
-                        Modifier.weight(1f),
-                        supporting = "Target daily budget"
-                    )
-                }
+                PlanSummaryGrid(
+                    metrics = metrics,
+                    onIncomeClick = onNavigateToPlan,
+                    onExpenseClick = onNavigateToPlan,
+                    onSafeToSpendClick = onNavigateToPlan,
+                    onRemainingDaysClick = onNavigateToPlan
+                )
             }
             item { GuidanceCard(metrics) }
         } else {
