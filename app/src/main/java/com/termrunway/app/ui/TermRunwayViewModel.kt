@@ -3,6 +3,7 @@ package com.termrunway.app.ui
 import android.app.Application
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
@@ -17,11 +18,11 @@ import com.termrunway.app.data.TermRunwayRepository
 import com.termrunway.app.data.Transaction
 import com.termrunway.app.data.TransactionType
 import com.termrunway.app.domain.FinancialCalculator
+import com.termrunway.app.notifications.NotificationScheduler
 import com.termrunway.app.ui.mode.TrackingMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -34,7 +35,13 @@ private data class StoredPreferences(
     val name: String,
     val themeMode: ThemeMode,
     val trackingMode: TrackingMode,
-    val onboardingCompleted: Boolean
+    val onboardingCompleted: Boolean,
+    val notificationsEnabled: Boolean,
+    val dailyReminderEnabled: Boolean,
+    val weeklyReviewEnabled: Boolean,
+    val monthlyReviewEnabled: Boolean,
+    val planEndingEnabled: Boolean,
+    val reminderHour: Int
 )
 
 data class AppUiState(
@@ -42,6 +49,12 @@ data class AppUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val trackingMode: TrackingMode = TrackingMode.DAILY,
     val onboardingCompleted: Boolean = false,
+    val notificationsEnabled: Boolean = true,
+    val dailyReminderEnabled: Boolean = true,
+    val weeklyReviewEnabled: Boolean = true,
+    val monthlyReviewEnabled: Boolean = true,
+    val planEndingEnabled: Boolean = true,
+    val reminderHour: Int = 20,
     val preferencesLoaded: Boolean = false,
     val dataLoaded: Boolean = false,
     val transactions: List<Transaction> = emptyList(),
@@ -82,7 +95,13 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                         else -> ThemeMode.SYSTEM
                     },
                     trackingMode = TrackingMode.fromStorageValue(prefs[TRACKING_MODE_KEY]),
-                    onboardingCompleted = onboardingDone
+                    onboardingCompleted = onboardingDone,
+                    notificationsEnabled = prefs[NOTIFICATIONS_ENABLED_KEY] ?: true,
+                    dailyReminderEnabled = prefs[DAILY_REMINDER_KEY] ?: true,
+                    weeklyReviewEnabled = prefs[WEEKLY_REVIEW_KEY] ?: true,
+                    monthlyReviewEnabled = prefs[MONTHLY_REVIEW_KEY] ?: true,
+                    planEndingEnabled = prefs[PLAN_ENDING_KEY] ?: true,
+                    reminderHour = prefs[REMINDER_HOUR_KEY] ?: 20
                 )
             }.collect { stored ->
                 _state.update {
@@ -91,9 +110,16 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                         themeMode = stored.themeMode,
                         trackingMode = stored.trackingMode,
                         onboardingCompleted = stored.onboardingCompleted,
+                        notificationsEnabled = stored.notificationsEnabled,
+                        dailyReminderEnabled = stored.dailyReminderEnabled,
+                        weeklyReviewEnabled = stored.weeklyReviewEnabled,
+                        monthlyReviewEnabled = stored.monthlyReviewEnabled,
+                        planEndingEnabled = stored.planEndingEnabled,
+                        reminderHour = stored.reminderHour,
                         preferencesLoaded = true
                     )
                 }
+                syncNotifications()
             }
         }
         refresh()
@@ -121,6 +147,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                         dataLoaded = true
                     )
                 }
+                syncNotifications()
             }.onFailure { error ->
                 _state.update {
                     it.copy(
@@ -139,7 +166,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(name = clean, onboardingCompleted = true) }
         viewModelScope.launch {
             preferences.edit {
-                it[NAME_KEY] = clean.take(60)
+                it[NAME_KEY] = clean.take(40)
                 it[ONBOARDING_KEY] = true
             }
         }
@@ -150,7 +177,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         if (clean.isEmpty()) return
         _state.update { it.copy(name = clean) }
         viewModelScope.launch {
-            preferences.edit { it[NAME_KEY] = clean.take(60) }
+            preferences.edit { it[NAME_KEY] = clean.take(40) }
         }
     }
 
@@ -168,6 +195,67 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             preferences.edit { it[TRACKING_MODE_KEY] = mode.storageValue }
         }
+    }
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        _state.update { it.copy(notificationsEnabled = enabled) }
+        viewModelScope.launch {
+            preferences.edit { it[NOTIFICATIONS_ENABLED_KEY] = enabled }
+            syncNotifications()
+        }
+    }
+
+    fun setDailyReminderEnabled(enabled: Boolean) {
+        _state.update { it.copy(dailyReminderEnabled = enabled) }
+        viewModelScope.launch {
+            preferences.edit { it[DAILY_REMINDER_KEY] = enabled }
+            syncNotifications()
+        }
+    }
+
+    fun setWeeklyReviewEnabled(enabled: Boolean) {
+        _state.update { it.copy(weeklyReviewEnabled = enabled) }
+        viewModelScope.launch {
+            preferences.edit { it[WEEKLY_REVIEW_KEY] = enabled }
+            syncNotifications()
+        }
+    }
+
+    fun setMonthlyReviewEnabled(enabled: Boolean) {
+        _state.update { it.copy(monthlyReviewEnabled = enabled) }
+        viewModelScope.launch {
+            preferences.edit { it[MONTHLY_REVIEW_KEY] = enabled }
+            syncNotifications()
+        }
+    }
+
+    fun setPlanEndingEnabled(enabled: Boolean) {
+        _state.update { it.copy(planEndingEnabled = enabled) }
+        viewModelScope.launch {
+            preferences.edit { it[PLAN_ENDING_KEY] = enabled }
+            syncNotifications()
+        }
+    }
+
+    fun setReminderHour(hour: Int) {
+        _state.update { it.copy(reminderHour = hour) }
+        viewModelScope.launch {
+            preferences.edit { it[REMINDER_HOUR_KEY] = hour }
+            syncNotifications()
+        }
+    }
+
+    fun syncNotifications() {
+        val current = _state.value
+        NotificationScheduler.syncReminders(
+            context = getApplication(),
+            masterEnabled = current.notificationsEnabled,
+            dailyEnabled = current.dailyReminderEnabled,
+            weeklyEnabled = current.weeklyReviewEnabled,
+            monthlyEnabled = current.monthlyReviewEnabled,
+            planEndingEnabled = current.planEndingEnabled,
+            targetHour = current.reminderHour
+        )
     }
 
     fun addTransaction(transaction: Transaction, onDone: (() -> Unit)? = null) {
@@ -372,6 +460,12 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                     prefs[THEME_KEY] = "system"
                     prefs.remove(TRACKING_MODE_KEY)
                     prefs.remove(ONBOARDING_KEY)
+                    prefs.remove(NOTIFICATIONS_ENABLED_KEY)
+                    prefs.remove(DAILY_REMINDER_KEY)
+                    prefs.remove(WEEKLY_REVIEW_KEY)
+                    prefs.remove(MONTHLY_REVIEW_KEY)
+                    prefs.remove(PLAN_ENDING_KEY)
+                    prefs.remove(REMINDER_HOUR_KEY)
                 }
             }.onSuccess {
                 refresh()
@@ -425,5 +519,11 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         private val THEME_KEY = stringPreferencesKey("theme")
         private val TRACKING_MODE_KEY = stringPreferencesKey("tracking_mode")
         private val ONBOARDING_KEY = booleanPreferencesKey("onboarding_completed")
+        private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
+        private val DAILY_REMINDER_KEY = booleanPreferencesKey("daily_reminder_enabled")
+        private val WEEKLY_REVIEW_KEY = booleanPreferencesKey("weekly_review_enabled")
+        private val MONTHLY_REVIEW_KEY = booleanPreferencesKey("monthly_review_enabled")
+        private val PLAN_ENDING_KEY = booleanPreferencesKey("plan_ending_enabled")
+        private val REMINDER_HOUR_KEY = intPreferencesKey("reminder_hour")
     }
 }
