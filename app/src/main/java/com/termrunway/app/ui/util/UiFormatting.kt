@@ -166,16 +166,19 @@ fun endOfDay(ms: Long): Long = startOfDay(ms) + DAY - 1
 
 fun addDays(ms: Long, count: Int): Long = ms + DAY * count
 
-fun parseMoney(value: String): Long =
+fun parseMoneyOrNull(value: String): Long? =
     runCatching {
         val normalized = value.trim().replace(",", "")
-        require(normalized.isNotEmpty())
-        java.math.BigDecimal(normalized)
-            .setScale(2, java.math.RoundingMode.HALF_UP)
+        if (normalized.isEmpty()) return null
+        val bd = java.math.BigDecimal(normalized)
+        if (bd < java.math.BigDecimal.ZERO) return null
+        bd.setScale(2, java.math.RoundingMode.HALF_UP)
             .movePointRight(2)
             .longValueExact()
-            .coerceAtLeast(0L)
-    }.getOrDefault(0L)
+    }.getOrNull()
+
+fun parseMoney(value: String): Long =
+    parseMoneyOrNull(value) ?: 0L
 
 fun moneyInput(paise: Long): String =
     String.format(Locale.getDefault(), "%.2f", paise / 100.0)

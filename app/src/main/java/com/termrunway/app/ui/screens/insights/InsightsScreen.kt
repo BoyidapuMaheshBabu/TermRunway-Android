@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoGraph
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.termrunway.app.data.PlanMetrics
 import com.termrunway.app.data.Transaction
 import com.termrunway.app.data.TransactionType
 import com.termrunway.app.domain.FinancialCalculator
@@ -69,10 +69,49 @@ import com.termrunway.app.ui.util.pickDate
 import com.termrunway.app.ui.util.resolvePeriodRange
 import com.termrunway.app.ui.util.startOfDay
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.max
+
+fun planStatusSentence(metrics: PlanMetrics): String {
+    val status = metrics.status
+    val variance = metrics.spendVariancePaise
+    val expected = metrics.expectedSpendToDatePaise
+    val actual = metrics.actualExpensePaise
+
+    if (status == "Upcoming") {
+        return "Your plan hasn't started yet. Your planned income and expenses are ready for the period."
+    }
+    if (status == "Completed") {
+        return "Your plan has ended. Review how your actual spending compared with your plan."
+    }
+    if (status == "Overdrawn" || (metrics.actualRemainingPaise < 0)) {
+        return "Your current spending is higher than the money available in this plan."
+    }
+
+    if (expected == 0L) {
+        return if (actual == 0L) {
+            "No spending has been recorded yet, and none was expected by this point in the plan."
+        } else {
+            "No spending was expected by this point in your plan, but ${moneyString(actual)} has been recorded."
+        }
+    }
+
+    val ratio = actual.toDouble() / expected.toDouble()
+
+    return when {
+        abs(variance) < 20_00 -> "Your spending is currently on track with your plan."
+        ratio in 0.95..1.05 -> "Your spending is currently on track with your plan."
+        ratio in 1.05..1.25 -> "Your spending is slightly above the pace expected by your plan."
+        ratio in 1.25..2.0 -> "Your spending is noticeably above the pace expected by your plan."
+        ratio in 2.0..3.0 -> "Your spending is much faster than the pace expected by your plan."
+        ratio > 3.0 -> "Your spending is far above the pace expected by your plan."
+        ratio in 0.75..<0.95 -> "Your spending is slightly below the pace expected by your plan."
+        ratio in 0.40..<0.75 -> "Your spending is noticeably below the pace expected by your plan."
+        else -> "Your spending is well below the pace expected by your plan."
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +132,7 @@ fun InsightsScreen(
             if (state.activePlan != null) {
                 add(PeriodPreset.ACTIVE_PLAN)
             }
+            add(PeriodPreset.ALL_TIME)
             add(PeriodPreset.CUSTOM)
         }
     }
@@ -101,7 +141,10 @@ fun InsightsScreen(
         resolvePeriodRange(selectedPreset, state.activePlan, customStartMs, customEndMs)
     }
 
-    val startMs = resolvedRange.startMs ?: startOfDay(addDays(System.currentTimeMillis(), -365))
+    val earliestTxMs = state.transactions.minOfOrNull { it.dateMs }
+    val defaultStartMs = earliestTxMs?.let { startOfDay(it) } ?: startOfDay(addDays(System.currentTimeMillis(), -30))
+
+    val startMs = resolvedRange.startMs ?: defaultStartMs
     val endMs = resolvedRange.endMs ?: endOfDay(System.currentTimeMillis())
 
     val income = FinancialCalculator.rangeIncome(state.transactions, startMs, endMs)
@@ -206,7 +249,7 @@ fun InsightsScreen(
                 state.plannedExpenses,
                 state.transactions
             )
-            item { SectionTitle("Plan view") }
+            item { SectionTitle("How your plan is going") }
             item { PlanComparePanel(metrics) }
         }
     }
@@ -224,7 +267,7 @@ private fun MoneyPulseChart(
     startMs: Long,
     endMs: Long
 ) {
-    val totalDays = FinancialCalculator.daysInclusive(startMs, endMs).coerceIn(1, 365)
+    val totalDays = FinancialCalculator.daysInclusive(startMs, endMs).coerceAtLeast(1)
     val points = remember(transactions, startMs, endMs, totalDays) {
         if (totalDays <= 14) {
             (0 until totalDays).map { offset ->
@@ -235,7 +278,7 @@ private fun MoneyPulseChart(
                     expensePaise = FinancialCalculator.dayExpense(transactions, day)
                 )
             }
-        } else {
+        } else if (totalDays <= 90) {
             val weeks = (totalDays + 6) / 7
             (0 until weeks).map { week ->
                 val weekStart = addDays(startMs, week * 7)
@@ -250,6 +293,25 @@ private fun MoneyPulseChart(
                     }
                 )
             }
+        } else {
+            val cal = Calendar.getInstance().apply { timeInMillis = startMs }
+            val endCal = Calendar.getInstance().apply { timeInMillis = endMs }
+            val pointsList = mutableListOf<MoneyPulsePoint>()
+            while (cal.timeInMillis <= endCal.timeInMillis || FinancialCalculator.sameDay(cal.timeInMillis, endCal.timeInMillis)) {
+                val monthStart = cal.timeInMillis
+                val monthLabel = SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(monthStart))
+                var monthInc = 0L
+                var monthExp = 0L
+                val currentMonth = cal.get(Calendar.MONTH)
+                val currentYear = cal.get(Calendar.YEAR)
+                while (cal.get(Calendar.MONTH) == currentMonth && cal.get(Calendar.YEAR) == currentYear && cal.timeInMillis <= endCal.timeInMillis) {
+                    monthInc += FinancialCalculator.dayIncome(transactions, cal.timeInMillis)
+                    monthExp += FinancialCalculator.dayExpense(transactions, cal.timeInMillis)
+                    cal.add(Calendar.DAY_OF_MONTH, 1)
+                }
+                pointsList.add(MoneyPulsePoint(monthLabel, monthInc, monthExp))
+            }
+            pointsList
         }
     }
 
@@ -263,7 +325,11 @@ private fun MoneyPulseChart(
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            if (totalDays <= 14) "Actual cash flow · each pair is one day" else "Actual cash flow · grouped by week for readability",
+            when {
+                totalDays <= 14 -> "Actual cash flow · each pair is one day"
+                totalDays <= 90 -> "Actual cash flow · grouped by week for readability"
+                else -> "Actual cash flow · grouped by month for readability"
+            },
             style = MaterialTheme.typography.bodySmall,
             color = RunwayMuted
         )
@@ -455,45 +521,133 @@ private fun MoneyPulseSummary(
 }
 
 private fun compactMoney(paise: Long): String {
-    val rupees = kotlin.math.abs(paise) / 100.0
+    val rupees = abs(paise) / 100.0
     val sign = if (paise < 0) "-" else ""
     return when {
         rupees >= 100000 -> sign + "₹" + String.format(Locale.getDefault(), "%.1fL", rupees / 100000.0)
-        rupees >= 1000 -> sign + "₹" + String.format(Locale.getDefault(), "%.1fk", rupees / 1000.0)
+        rupees >= 1000 -> sign + "₹" + String.format(Locale.getDefault(), "%.1fk", rupees / 100.0)
         else -> sign + "₹" + String.format(Locale.getDefault(), "%.0f", rupees)
     }
 }
 
 @Composable
-private fun PlanComparePanel(metrics: com.termrunway.app.data.PlanMetrics) {
-    Card(shape = RoundedCornerShape(20.dp)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row {
-                Column(Modifier.weight(1f)) {
-                    Text("Plan vs actual", fontWeight = FontWeight.Bold)
-                    Text(metrics.guidance, color = RunwayMuted, style = MaterialTheme.typography.bodySmall)
-                }
-                AssistChip(onClick = {}, label = { Text(metrics.status) })
-            }
-            CompareLine("Expected spent to date", metrics.expectedSpendToDatePaise, metrics.actualExpensePaise)
-            CompareLine("Expected remaining", metrics.expectedRemainingPaise, metrics.actualRemainingPaise)
-        }
-    }
-}
+private fun PlanComparePanel(metrics: PlanMetrics) {
+    val statusSentence = planStatusSentence(metrics)
 
-@Composable
-private fun CompareLine(label: String, expected: Long, actual: Long) {
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Row {
-            Text(label, Modifier.weight(1f), color = RunwayMuted)
-            Text(moneyString(actual), fontWeight = FontWeight.Bold)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            statusSentence,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // Spending Pace Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Spending Pace", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Expected spend so far", style = MaterialTheme.typography.labelMedium, color = RunwayMuted)
+                        Spacer(Modifier.height(2.dp))
+                        Text(moneyString(metrics.expectedSpendToDatePaise), style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                        Text("Actual spending", style = MaterialTheme.typography.labelMedium, color = RunwayMuted)
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            moneyString(metrics.actualExpensePaise),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = RunwayRed
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                val variance = metrics.spendVariancePaise
+                val varianceText = when {
+                    variance > 0 -> "${moneyString(variance)} above expected pace"
+                    variance < 0 -> "${moneyString(abs(variance))} below expected pace"
+                    else -> "Spending is on pace with the plan"
+                }
+                val varianceColor = when {
+                    variance > 0 -> RunwayRed
+                    else -> RunwayMint
+                }
+
+                Text(
+                    varianceText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = varianceColor
+                )
+            }
         }
-        LinearProgressIndicator(
-            progress = {
-                (abs(actual).toDouble() / max(abs(expected), abs(actual)).coerceAtLeast(1).toDouble())
-                    .toFloat().coerceIn(0f, 1f)
-            },
-            modifier = Modifier.fillMaxWidth()
+
+        // Money Position Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Money Position", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Expected at plan end", style = MaterialTheme.typography.labelMedium, color = RunwayMuted)
+                        Spacer(Modifier.height(2.dp))
+                        Text(moneyString(metrics.expectedRemainingPaise), style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                        Text("Money remaining now", style = MaterialTheme.typography.labelMedium, color = RunwayMuted)
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            moneyString(metrics.actualRemainingPaise),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (metrics.actualRemainingPaise >= 0) RunwayMint else RunwayRed
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                val diff = metrics.actualRemainingPaise - metrics.expectedRemainingPaise
+                val diffText = if (diff == 0L) {
+                    "On track for expected end balance"
+                } else {
+                    "${moneyString(abs(diff))} difference"
+                }
+
+                Text(
+                    diffText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Text(
+            "Based on this plan and your actual transactions.",
+            style = MaterialTheme.typography.labelSmall,
+            color = RunwayMuted
         )
     }
 }
