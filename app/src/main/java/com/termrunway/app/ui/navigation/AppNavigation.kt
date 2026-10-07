@@ -315,15 +315,15 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
             when (tab) {
                 RootTab.HOME -> HomeScreen(
                     state = state,
-                    trackingMode = state.trackingMode,
                     onSettings = { settingsOpen = true },
-                    onTrackingMode = viewModel::setTrackingMode,
                     onAdd = { transactionOpen = true },
                     onTransaction = {
                         selectedTransactionId = it.id
                         transactionOpen = true
                     },
-                    onPlanEdit = { planEditorOpen = true }
+                    onPlanEdit = { planEditorOpen = true },
+                    onNavigateToActivity = { tab = RootTab.ACTIVITY },
+                    onNavigateToPlan = { tab = RootTab.PLAN }
                 )
                 RootTab.PLAN -> PlanScreen(
                     state = state,
