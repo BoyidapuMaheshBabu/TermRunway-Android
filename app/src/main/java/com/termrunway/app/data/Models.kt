@@ -75,7 +75,9 @@ data class PlanMetrics(
     val spendVariancePaise: Long,
     val status: String,
     val guidance: String
-)
+) {
+    val safeToSpendTodayPaise: Long get() = availablePerDayPaise.coerceAtLeast(0L)
+}
 
 object DefaultCategories {
     val income = listOf(

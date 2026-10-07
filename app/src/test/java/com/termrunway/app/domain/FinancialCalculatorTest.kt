@@ -65,7 +65,150 @@ class FinancialCalculatorTest {
         assertEquals(80_000L, metrics.totalPlannedExpensePaise)
         assertEquals(105_000L, metrics.actualRemainingPaise)
         assertEquals(6, metrics.daysRemaining)
-        assertTrue(metrics.availablePerDayPaise > 0)
+        assertEquals(17_500L, metrics.safeToSpendTodayPaise)
+        assertTrue(metrics.safeToSpendTodayPaise > 0)
+    }
+
+    @Test
+    fun planMetricsHandlesOverdrawnGracefully() {
+        val start = day(-2)
+        val end = day(5)
+        val plan = FinancialPlan(
+            name = "Tight Month",
+            startMs = start,
+            endMs = end,
+            startingMoneyPaise = 10_000 // ₹100
+        )
+        val transactions = listOf(
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 30_000, category = "Food", description = "", dateMs = day(0)) // ₹300
+        )
+
+        val metrics = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = emptyList(),
+            plannedExpenses = emptyList(),
+            transactions = transactions,
+            todayMs = day(0)
+        )
+
+        assertEquals("Overdrawn", metrics.status)
+        assertEquals(-20_000L, metrics.actualRemainingPaise)
+        assertEquals(0L, metrics.safeToSpendTodayPaise)
+        assertTrue(metrics.guidance.contains("above available money"))
+    }
+
+    @Test
+    fun planMetricsHandlesUpcomingPlan() {
+        val start = day(5)
+        val end = day(15)
+        val plan = FinancialPlan(
+            name = "Next Semester",
+            startMs = start,
+            endMs = end,
+            startingMoneyPaise = 500_000
+        )
+
+        val metrics = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = emptyList(),
+            plannedExpenses = emptyList(),
+            transactions = emptyList(),
+            todayMs = day(0)
+        )
+
+        assertEquals("Upcoming", metrics.status)
+        assertTrue(metrics.guidance.contains("Your plan starts on"))
+    }
+
+    @Test
+    fun planMetricsHandlesCompletedPlan() {
+        val start = day(-20)
+        val end = day(-5)
+        val plan = FinancialPlan(
+            name = "Past Term",
+            startMs = start,
+            endMs = end,
+            startingMoneyPaise = 200_000
+        )
+
+        val metrics = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = emptyList(),
+            plannedExpenses = emptyList(),
+            transactions = emptyList(),
+            todayMs = day(0)
+        )
+
+        assertEquals("Completed", metrics.status)
+        assertEquals(0, metrics.daysRemaining)
+        assertEquals(0L, metrics.safeToSpendTodayPaise)
+        assertTrue(metrics.guidance.contains("This plan has ended"))
+    }
+
+    @Test
+    fun planMetricsRecalculatesWhenTransactionsChange() {
+        val start = day(0)
+        val end = day(9)
+        val plan = FinancialPlan(
+            name = "Flexible Budget",
+            startMs = start,
+            endMs = end,
+            startingMoneyPaise = 100_000 // ₹1000
+        )
+
+        val initialMetrics = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = emptyList(),
+            plannedExpenses = emptyList(),
+            transactions = emptyList(),
+            todayMs = day(0)
+        )
+
+        assertEquals(10, initialMetrics.daysRemaining)
+        assertEquals(10_000L, initialMetrics.safeToSpendTodayPaise) // ₹100 / day
+
+        // User spends ₹500 on day 1 (more than ₹100 daily pace)
+        val newTx = listOf(
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 50_000, category = "Food", description = "", dateMs = day(0))
+        )
+
+        val updatedMetrics = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = emptyList(),
+            plannedExpenses = emptyList(),
+            transactions = newTx,
+            todayMs = day(1) // 9 days remaining
+        )
+
+        assertEquals(50_000L, updatedMetrics.actualRemainingPaise) // ₹500 remaining
+        assertEquals(9, updatedMetrics.daysRemaining)
+        assertEquals(5_555L, updatedMetrics.safeToSpendTodayPaise) // ₹55.55 / day dynamically adjusted
+    }
+
+    @Test
+    fun planMetricsSupportsLargeOneTimeExpense() {
+        val start = day(0)
+        val end = day(9)
+        val plan = FinancialPlan(
+            name = "College Term",
+            startMs = start,
+            endMs = end,
+            startingMoneyPaise = 1_000_000 // ₹10,000
+        )
+        val expenses = listOf(
+            PlannedExpense(planId = 1, category = "Education", amountPaise = 500_000, expectedDateMs = start) // ₹5,000 college fee
+        )
+
+        val metrics = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = emptyList(),
+            plannedExpenses = expenses,
+            transactions = emptyList(),
+            todayMs = day(0)
+        )
+
+        assertEquals(500_000L, metrics.totalPlannedExpensePaise)
+        assertEquals(500_000L, metrics.expectedRemainingPaise) // ₹5,000 expected remaining after college fee
     }
 
     @Test
