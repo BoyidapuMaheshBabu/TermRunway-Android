@@ -185,7 +185,13 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
             onDeleteCategory = viewModel::deleteCategory,
             onClearData = { viewModel.clearAll { settingsOpen = false } },
             onExport = { uri -> viewModel.exportBackup(context.contentResolver, uri) {} },
-            onRestore = { uri -> viewModel.restoreBackup(context.contentResolver, uri) {} }
+            onRestore = { uri -> viewModel.restoreBackup(context.contentResolver, uri) {} },
+            onNotificationsToggle = viewModel::setNotificationsEnabled,
+            onDailyReminderToggle = viewModel::setDailyReminderEnabled,
+            onWeeklyReviewToggle = viewModel::setWeeklyReviewEnabled,
+            onMonthlyReviewToggle = viewModel::setMonthlyReviewEnabled,
+            onPlanEndingToggle = viewModel::setPlanEndingEnabled,
+            onReminderHourChange = viewModel::setReminderHour
         )
         return
     }

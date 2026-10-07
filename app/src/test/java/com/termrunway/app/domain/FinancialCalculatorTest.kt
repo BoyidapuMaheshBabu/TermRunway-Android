@@ -27,8 +27,8 @@ class FinancialCalculatorTest {
             Transaction(type = TransactionType.EXPENSE, amountPaise = 15_000, category = "Transport", description = "", dateMs = day(-1))
         )
 
-        assertEquals(50_000, FinancialCalculator.balance(transactions))
-        assertEquals(35_000, FinancialCalculator.dayExpense(transactions, day(0)))
+        assertEquals(50_000L, FinancialCalculator.balance(transactions))
+        assertEquals(35_000L, FinancialCalculator.dayExpense(transactions, day(0)))
     }
 
     @Test
@@ -61,9 +61,9 @@ class FinancialCalculatorTest {
             todayMs = day(4)
         )
 
-        assertEquals(50_000, metrics.totalExpectedIncomePaise)
-        assertEquals(80_000, metrics.totalPlannedExpensePaise)
-        assertEquals(105_000, metrics.actualRemainingPaise)
+        assertEquals(50_000L, metrics.totalExpectedIncomePaise)
+        assertEquals(80_000L, metrics.totalPlannedExpensePaise)
+        assertEquals(105_000L, metrics.actualRemainingPaise)
         assertEquals(6, metrics.daysRemaining)
         assertTrue(metrics.availablePerDayPaise > 0)
     }
@@ -79,7 +79,7 @@ class FinancialCalculatorTest {
         val totals = FinancialCalculator.categoryTotals(transactions, TransactionType.EXPENSE)
 
         assertEquals(listOf("Food", "Transport"), totals.keys.toList())
-        assertEquals(30_000, totals["Food"])
-        assertEquals(25_000, totals["Transport"])
+        assertEquals(30_000L, totals["Food"])
+        assertEquals(25_000L, totals["Transport"])
     }
 }
