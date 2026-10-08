@@ -98,10 +98,17 @@ fun planStatusSentence(metrics: PlanMetrics): String {
         }
     }
 
+    if (expected < 50_00L) { // Tiny expected value (< ₹50)
+        return when {
+            variance > 0 -> "Your spending is above the expected amount so far."
+            variance < 0 -> "Your spending is below the expected amount so far."
+            else -> "Your spending is currently on track with your plan."
+        }
+    }
+
     val ratio = actual.toDouble() / expected.toDouble()
 
     return when {
-        abs(variance) < 20_00 -> "Your spending is currently on track with your plan."
         ratio in 0.95..1.05 -> "Your spending is currently on track with your plan."
         ratio in 1.05..1.25 -> "Your spending is slightly above the pace expected by your plan."
         ratio in 1.25..2.0 -> "Your spending is noticeably above the pace expected by your plan."

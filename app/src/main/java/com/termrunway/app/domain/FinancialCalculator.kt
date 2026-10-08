@@ -79,6 +79,28 @@ object FinancialCalculator {
         val expectedIncome = plannedIncome.sumOf { it.amountPaise }
         val plannedExpense = plannedExpenses.sumOf { it.amountPaise }
 
+        // Time-aware expected income to date
+        val expectedIncomeToDate = when {
+            todayMs < plan.startMs -> 0L
+            todayMs > plan.endMs -> expectedIncome
+            else -> {
+                val todayStart = startOfDay(todayMs)
+                plannedIncome.sumOf { income ->
+                    val incDate = income.expectedDateMs
+                    if (incDate != null) {
+                        if (todayStart >= startOfDay(incDate)) {
+                            income.amountPaise
+                        } else {
+                            0L
+                        }
+                    } else {
+                        if (totalDays <= 0) income.amountPaise
+                        else (income.amountPaise.toDouble() * elapsedDays.toDouble() / totalDays.toDouble()).roundToLong()
+                    }
+                }
+            }
+        }
+
         // Actual transactions up to today for active plans
         val actualIncome = when {
             todayMs < plan.startMs -> 0L
@@ -120,8 +142,20 @@ object FinancialCalculator {
         val averageSpend = if (elapsedDays > 0) actualExpense / elapsedDays else 0L
 
         // Discretionary safe spending considering future planned commitments
-        val remainingPlannedCommitments = max(0L, plannedExpense - actualExpense)
-        val discretionaryRemaining = max(0L, actualRemaining - remainingPlannedCommitments)
+        val todayStart = startOfDay(todayMs)
+        val futureCommitments = when {
+            todayMs < plan.startMs -> plannedExpense
+            todayMs > plan.endMs -> 0L
+            else -> plannedExpenses.filter { it.expectedDateMs != null && startOfDay(it.expectedDateMs) > todayStart }.sumOf { it.amountPaise }
+        }
+        val pastOrUndatedPlanned = when {
+            todayMs < plan.startMs -> 0L
+            todayMs > plan.endMs -> plannedExpense
+            else -> plannedExpenses.filter { it.expectedDateMs == null || startOfDay(it.expectedDateMs) <= todayStart }.sumOf { it.amountPaise }
+        }
+        val remainingPastOrUndated = max(0L, pastOrUndatedPlanned - actualExpense)
+        val totalRemainingPlannedCommitments = futureCommitments + remainingPastOrUndated
+        val discretionaryRemaining = max(0L, actualRemaining - totalRemainingPlannedCommitments)
         val availablePerDay = if (remainingDays > 0) discretionaryRemaining / remainingDays else 0L
 
         val ratio = if (expectedSpendToDate > 0) actualExpense.toDouble() / expectedSpendToDate.toDouble() else null
@@ -156,6 +190,7 @@ object FinancialCalculator {
 
         return PlanMetrics(
             totalExpectedIncomePaise = expectedIncome,
+            expectedIncomeToDatePaise = expectedIncomeToDate,
             totalPlannedExpensePaise = plannedExpense,
             actualIncomePaise = actualIncome,
             actualExpensePaise = actualExpense,

@@ -62,6 +62,12 @@ class PlanStatusSentenceTest {
     }
 
     @Test
+    fun testTinyExpectedValueAboveDoesNotReturnOnTrack() {
+        val m = createMetrics(expectedSpend = 100L, actualSpend = 2_000L) // Expected ₹1, Actual ₹20
+        assertEquals("Your spending is above the expected amount so far.", planStatusSentence(m))
+    }
+
+    @Test
     fun testZeroExpectedZeroActual() {
         val m = createMetrics(expectedSpend = 0L, actualSpend = 0L)
         assertEquals("No spending has been recorded yet, and none was expected by this point in the plan.", planStatusSentence(m))

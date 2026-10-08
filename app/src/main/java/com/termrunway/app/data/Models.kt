@@ -61,6 +61,7 @@ data class BackupSnapshot(
 
 data class PlanMetrics(
     val totalExpectedIncomePaise: Long,
+    val expectedIncomeToDatePaise: Long = totalExpectedIncomePaise,
     val totalPlannedExpensePaise: Long,
     val actualIncomePaise: Long,
     val actualExpensePaise: Long,

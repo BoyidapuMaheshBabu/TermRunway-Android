@@ -73,6 +73,79 @@ class FinancialCalculatorTest {
     }
 
     @Test
+    fun expectedIncomeToDateExcludesFutureIncomeAndDoesNotIncreaseCurrentMoney() {
+        val start = day(0)
+        val end = day(9)
+        val plan = FinancialPlan(
+            name = "Income Plan",
+            startMs = start,
+            endMs = end,
+            startingMoneyPaise = 200_000 // ₹2,000
+        )
+        val incomes = listOf(
+            PlannedIncome(planId = 1, source = "Future Allowance", amountPaise = 1000_000, expectedDateMs = day(7)) // ₹10,000 on day 7
+        )
+
+        val metricsDay2 = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = incomes,
+            plannedExpenses = emptyList(),
+            transactions = emptyList(),
+            todayMs = day(2)
+        )
+
+        // Day 2: Expected income to date is 0L
+        assertEquals(1000_000L, metricsDay2.totalExpectedIncomePaise)
+        assertEquals(0L, metricsDay2.expectedIncomeToDatePaise)
+        assertEquals(200_000L, metricsDay2.actualRemainingPaise) // Remains ₹2,000 (starting money)
+        assertEquals(25_000L, metricsDay2.safeToSpendTodayPaise) // ₹2,000 / 8 remaining days = ₹250/day, NOT increased by future ₹10,000 income
+
+        val metricsDay7 = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = incomes,
+            plannedExpenses = emptyList(),
+            transactions = emptyList(),
+            todayMs = day(7)
+        )
+
+        // Day 7: Expected income to date is 1,000,000
+        assertEquals(1000_000L, metricsDay7.expectedIncomeToDatePaise)
+    }
+
+    @Test
+    fun unrelatedActualExpenseDoesNotFalselyReleaseFutureCollegeFee() {
+        val start = day(0)
+        val end = day(9) // 10 days
+        val plan = FinancialPlan(
+            name = "College Term Plan",
+            startMs = start,
+            endMs = end,
+            startingMoneyPaise = 1000_000 // ₹10,000 starting money
+        )
+        val expenses = listOf(
+            PlannedExpense(planId = 1, category = "College Fee", amountPaise = 500_000, expectedDateMs = day(8)) // ₹5,000 fee due on day 8
+        )
+        val transactions = listOf(
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 500_000, category = "Food", description = "", dateMs = day(1)) // ₹5,000 actual food expense on day 1
+        )
+
+        val metricsDay2 = FinancialCalculator.planMetrics(
+            plan = plan,
+            plannedIncome = emptyList(),
+            plannedExpenses = expenses,
+            transactions = transactions,
+            todayMs = day(2)
+        )
+
+        // On day 2, actual remaining is ₹5,000. Future college fee is ₹5,000.
+        // Discretionary remaining = max(0, 5,000 - 5,000) = ₹0.
+        // Safe to spend today = ₹0. The ₹5,000 food expense did NOT falsely release the future college fee commitment!
+        assertEquals(500_000L, metricsDay2.actualExpensePaise)
+        assertEquals(500_000L, metricsDay2.actualRemainingPaise)
+        assertEquals(0L, metricsDay2.safeToSpendTodayPaise)
+    }
+
+    @Test
     fun futureActualTransactionDoesNotCountForActivePlanSoFar() {
         val start = day(0)
         val end = day(9)
