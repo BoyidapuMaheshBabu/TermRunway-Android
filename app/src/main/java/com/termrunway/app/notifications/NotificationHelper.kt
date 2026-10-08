@@ -19,7 +19,7 @@ object NotificationHelper {
     const val DAILY_REMINDER_ID = 1001
     const val WEEKLY_REVIEW_ID = 1002
     const val MONTHLY_REVIEW_ID = 1003
-    const val PLAN_ENDING_ID = 1004
+    const val PLAN_PROGRESS_ID = 1004
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

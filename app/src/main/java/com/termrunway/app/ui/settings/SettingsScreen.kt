@@ -345,7 +345,7 @@ fun SettingsScreen(
                                 Text("Enable Notifications", fontWeight = FontWeight.Bold)
                             }
                             Text(
-                                "Allow notifications to receive daily transaction reminders, weekly/monthly spending reviews, and active plan ending alerts.",
+                                "Allow notifications to receive daily transaction reminders, weekly/monthly spending reviews, and plan progress updates.",
                                 color = RunwayMuted,
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -360,7 +360,7 @@ fun SettingsScreen(
             item {
                 SettingToggleRow(
                     title = "Allow Reminders",
-                    subtitle = "Master switch for all local notification alerts",
+                    subtitle = "Controls all TermRunway notification alerts",
                     checked = state.notificationsEnabled,
                     onCheckedChange = { enabled ->
                         if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasPermission) {
@@ -399,8 +399,8 @@ fun SettingsScreen(
                 }
                 item {
                     SettingToggleRow(
-                        title = "Active Plan ending alerts",
-                        subtitle = "Remind 3 days before and on the date an active plan ends",
+                        title = "Plan progress updates",
+                        subtitle = "Get notified at important points during an active plan.",
                         checked = state.planEndingEnabled,
                         onCheckedChange = onPlanEndingToggle
                     )
@@ -426,7 +426,7 @@ fun SettingsScreen(
                             val customLabel = if (isCustomSelected) {
                                 formatTime(state.reminderHour, state.reminderMinute) + " ✓"
                             } else {
-                                "Custom time…"
+                                "Custom"
                             }
 
                             FilterChip(

@@ -25,7 +25,7 @@ class NotificationTest {
         assertEquals(1001, NotificationHelper.DAILY_REMINDER_ID)
         assertEquals(1002, NotificationHelper.WEEKLY_REVIEW_ID)
         assertEquals(1003, NotificationHelper.MONTHLY_REVIEW_ID)
-        assertEquals(1004, NotificationHelper.PLAN_ENDING_ID)
+        assertEquals(1004, NotificationHelper.PLAN_PROGRESS_ID)
     }
 
     @Test

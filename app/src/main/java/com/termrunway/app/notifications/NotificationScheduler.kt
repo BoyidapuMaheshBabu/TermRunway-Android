@@ -11,7 +11,7 @@ object NotificationScheduler {
     private const val DAILY_WORK_TAG = "termrunway_daily_reminder"
     private const val WEEKLY_WORK_TAG = "termrunway_weekly_review"
     private const val MONTHLY_WORK_TAG = "termrunway_monthly_review"
-    private const val PLAN_ENDING_WORK_TAG = "termrunway_plan_ending"
+    private const val PLAN_PROGRESS_WORK_TAG = "termrunway_plan_progress"
 
     fun syncReminders(
         context: Context,
@@ -29,7 +29,7 @@ object NotificationScheduler {
             workManager.cancelAllWorkByTag(DAILY_WORK_TAG)
             workManager.cancelAllWorkByTag(WEEKLY_WORK_TAG)
             workManager.cancelAllWorkByTag(MONTHLY_WORK_TAG)
-            workManager.cancelAllWorkByTag(PLAN_ENDING_WORK_TAG)
+            workManager.cancelAllWorkByTag(PLAN_PROGRESS_WORK_TAG)
             return
         }
 
@@ -84,19 +84,21 @@ object NotificationScheduler {
             workManager.cancelAllWorkByTag(MONTHLY_WORK_TAG)
         }
 
-        // Plan Ending Alerts
+        // Plan Progress Updates
         if (planEndingEnabled) {
-            val planWork = PeriodicWorkRequestBuilder<PlanEndingWorker>(24, TimeUnit.HOURS)
-                .addTag(PLAN_ENDING_WORK_TAG)
+            val initialDelay = calculateInitialDelay(targetHour, targetMinute)
+            val planWork = PeriodicWorkRequestBuilder<PlanProgressWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+                .addTag(PLAN_PROGRESS_WORK_TAG)
                 .build()
 
             workManager.enqueueUniquePeriodicWork(
-                PLAN_ENDING_WORK_TAG,
+                PLAN_PROGRESS_WORK_TAG,
                 ExistingPeriodicWorkPolicy.UPDATE,
                 planWork
             )
         } else {
-            workManager.cancelAllWorkByTag(PLAN_ENDING_WORK_TAG)
+            workManager.cancelAllWorkByTag(PLAN_PROGRESS_WORK_TAG)
         }
     }
 
