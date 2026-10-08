@@ -199,7 +199,8 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
             onWeeklyReviewToggle = viewModel::setWeeklyReviewEnabled,
             onMonthlyReviewToggle = viewModel::setMonthlyReviewEnabled,
             onPlanEndingToggle = viewModel::setPlanEndingEnabled,
-            onReminderHourChange = viewModel::setReminderHour
+            onReminderHourChange = viewModel::setReminderHour,
+            onReminderTimeChange = viewModel::setReminderTime
         )
         return
     }

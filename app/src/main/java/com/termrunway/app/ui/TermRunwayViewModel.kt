@@ -41,7 +41,8 @@ private data class StoredPreferences(
     val weeklyReviewEnabled: Boolean,
     val monthlyReviewEnabled: Boolean,
     val planEndingEnabled: Boolean,
-    val reminderHour: Int
+    val reminderHour: Int,
+    val reminderMinute: Int
 )
 
 data class AppUiState(
@@ -55,6 +56,7 @@ data class AppUiState(
     val monthlyReviewEnabled: Boolean = true,
     val planEndingEnabled: Boolean = true,
     val reminderHour: Int = 20,
+    val reminderMinute: Int = 0,
     val preferencesLoaded: Boolean = false,
     val dataLoaded: Boolean = false,
     val transactions: List<Transaction> = emptyList(),
@@ -101,7 +103,8 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                     weeklyReviewEnabled = prefs[WEEKLY_REVIEW_KEY] ?: true,
                     monthlyReviewEnabled = prefs[MONTHLY_REVIEW_KEY] ?: true,
                     planEndingEnabled = prefs[PLAN_ENDING_KEY] ?: true,
-                    reminderHour = prefs[REMINDER_HOUR_KEY] ?: 20
+                    reminderHour = prefs[REMINDER_HOUR_KEY] ?: 20,
+                    reminderMinute = prefs[REMINDER_MINUTE_KEY] ?: 0
                 )
             }.collect { stored ->
                 _state.update {
@@ -116,6 +119,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                         monthlyReviewEnabled = stored.monthlyReviewEnabled,
                         planEndingEnabled = stored.planEndingEnabled,
                         reminderHour = stored.reminderHour,
+                        reminderMinute = stored.reminderMinute,
                         preferencesLoaded = true
                     )
                 }
@@ -238,9 +242,16 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setReminderHour(hour: Int) {
-        _state.update { it.copy(reminderHour = hour) }
+        setReminderTime(hour, 0)
+    }
+
+    fun setReminderTime(hour: Int, minute: Int) {
+        _state.update { it.copy(reminderHour = hour, reminderMinute = minute) }
         viewModelScope.launch {
-            preferences.edit { it[REMINDER_HOUR_KEY] = hour }
+            preferences.edit {
+                it[REMINDER_HOUR_KEY] = hour
+                it[REMINDER_MINUTE_KEY] = minute
+            }
             syncNotifications()
         }
     }
@@ -254,7 +265,8 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
             weeklyEnabled = current.weeklyReviewEnabled,
             monthlyEnabled = current.monthlyReviewEnabled,
             planEndingEnabled = current.planEndingEnabled,
-            targetHour = current.reminderHour
+            targetHour = current.reminderHour,
+            targetMinute = current.reminderMinute
         )
     }
 
@@ -466,6 +478,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                     prefs.remove(MONTHLY_REVIEW_KEY)
                     prefs.remove(PLAN_ENDING_KEY)
                     prefs.remove(REMINDER_HOUR_KEY)
+                    prefs.remove(REMINDER_MINUTE_KEY)
                 }
             }.onSuccess {
                 refresh()
@@ -525,5 +538,6 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         private val MONTHLY_REVIEW_KEY = booleanPreferencesKey("monthly_review_enabled")
         private val PLAN_ENDING_KEY = booleanPreferencesKey("plan_ending_enabled")
         private val REMINDER_HOUR_KEY = intPreferencesKey("reminder_hour")
+        private val REMINDER_MINUTE_KEY = intPreferencesKey("reminder_minute")
     }
 }

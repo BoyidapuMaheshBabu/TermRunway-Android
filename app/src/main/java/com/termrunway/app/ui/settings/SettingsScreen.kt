@@ -3,6 +3,7 @@ package com.termrunway.app.ui.settings
 import android.Manifest
 import android.net.Uri
 import android.os.Build
+import android.text.format.DateFormat
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.activity.result.contract.ActivityResultContracts.OpenDocument
@@ -51,6 +52,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +77,17 @@ import com.termrunway.app.ui.onboarding.RestoreBackupDialogs
 import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
 import com.termrunway.app.ui.util.sanitizeFilename
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+
+private fun formatTime(hour: Int, minute: Int): String {
+    val cal = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, hour)
+        set(Calendar.MINUTE, minute)
+    }
+    return SimpleDateFormat("h:mm a", Locale.getDefault()).format(cal.time)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,13 +106,15 @@ fun SettingsScreen(
     onWeeklyReviewToggle: (Boolean) -> Unit,
     onMonthlyReviewToggle: (Boolean) -> Unit,
     onPlanEndingToggle: (Boolean) -> Unit,
-    onReminderHourChange: (Int) -> Unit
+    onReminderHourChange: (Int) -> Unit = {},
+    onReminderTimeChange: (Int, Int) -> Unit = { h, _ -> onReminderHourChange(h) }
 ) {
     val context = LocalContext.current
     var pendingUri by remember { mutableStateOf<Uri?>(null) }
     var pendingSnapshot by remember { mutableStateOf<BackupSnapshot?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
 
     val createBackup = rememberLauncherForActivityResult(CreateDocument("application/json")) { uri ->
         if (uri != null) onExport(uri)
@@ -137,6 +153,35 @@ fun SettingsScreen(
             pendingUri = null
         }
     )
+
+    if (showTimePicker) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = state.reminderHour,
+            initialMinute = state.reminderMinute,
+            is24Hour = DateFormat.is24HourFormat(context)
+        )
+        AlertDialog(
+            onDismissRequest = { showTimePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showTimePicker = false
+                        onReminderTimeChange(timePickerState.hour, timePickerState.minute)
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTimePicker = false }) {
+                    Text("Cancel")
+                }
+            },
+            text = {
+                TimePicker(state = timePickerState)
+            }
+        )
+    }
 
     var hasPermission by remember { mutableStateOf(NotificationHelper.hasNotificationPermission(context)) }
     val permissionLauncher = rememberLauncherForActivityResult(RequestPermission()) { granted ->
@@ -370,11 +415,25 @@ fun SettingsScreen(
                         ) {
                             listOf(19 to "7:00 PM", 20 to "8:00 PM", 21 to "9:00 PM", 22 to "10:00 PM").forEach { (hour, label) ->
                                 FilterChip(
-                                    selected = state.reminderHour == hour,
-                                    onClick = { onReminderHourChange(hour) },
+                                    selected = state.reminderHour == hour && state.reminderMinute == 0,
+                                    onClick = { onReminderTimeChange(hour, 0) },
                                     label = { Text(label) }
                                 )
                             }
+
+                            val isPreset = (state.reminderHour in listOf(19, 20, 21, 22)) && state.reminderMinute == 0
+                            val isCustomSelected = !isPreset
+                            val customLabel = if (isCustomSelected) {
+                                formatTime(state.reminderHour, state.reminderMinute) + " ✓"
+                            } else {
+                                "Custom time…"
+                            }
+
+                            FilterChip(
+                                selected = isCustomSelected,
+                                onClick = { showTimePicker = true },
+                                label = { Text(customLabel) }
+                            )
                         }
                     }
                 }
