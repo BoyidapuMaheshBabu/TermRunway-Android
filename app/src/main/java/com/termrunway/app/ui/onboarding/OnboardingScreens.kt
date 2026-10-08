@@ -63,6 +63,87 @@ fun StartupScreen() {
 }
 
 @Composable
+fun RestoreBackupDialogs(
+    pendingSnapshot: BackupSnapshot?,
+    hasLocalData: Boolean,
+    errorMessage: String?,
+    showSuccessDialog: Boolean,
+    onDismissError: () -> Unit,
+    onDismissPreview: () -> Unit,
+    onConfirmRestore: () -> Unit,
+    onDismissSuccess: () -> Unit
+) {
+    // Error Dialog
+    errorMessage?.let { msg ->
+        AlertDialog(
+            onDismissRequest = onDismissError,
+            title = { Text("Invalid Backup File", fontWeight = FontWeight.Bold) },
+            text = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = onDismissError) { Text("OK") }
+            }
+        )
+    }
+
+    // Success Dialog
+    if (showSuccessDialog && pendingSnapshot != null) {
+        AlertDialog(
+            onDismissRequest = onDismissSuccess,
+            title = { Text("✓ Restore Complete", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("Your TermRunway data has been successfully restored on this device.")
+            },
+            confirmButton = {
+                Button(onClick = onDismissSuccess) {
+                    Text("Continue", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    // Preview / Confirm Dialog
+    pendingSnapshot?.let { snapshot ->
+        if (!showSuccessDialog) {
+            AlertDialog(
+                onDismissRequest = onDismissPreview,
+                title = { Text("Restore from Backup", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Backup details for ${snapshot.name.ifBlank { "User" }}:", fontWeight = FontWeight.SemiBold)
+                        Column(Modifier.padding(start = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("• Transactions: ${snapshot.transactions.size}", style = MaterialTheme.typography.bodyMedium)
+                            Text("• Plans: ${snapshot.plans.size}", style = MaterialTheme.typography.bodyMedium)
+                            Text("• Planned Incomes: ${snapshot.plannedIncomes.size}", style = MaterialTheme.typography.bodyMedium)
+                            Text("• Planned Expenses: ${snapshot.plannedExpenses.size}", style = MaterialTheme.typography.bodyMedium)
+                            Text("• Categories: ${snapshot.categories.size}", style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (hasLocalData) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "This will replace the current TermRunway data on this device with the selected backup.",
+                                color = RunwayRed,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = onConfirmRestore) {
+                        Text("Restore", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onDismissPreview) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
 fun WelcomeScreen(
     onSave: (String) -> Unit,
     onRestoreBackup: (Uri, (Boolean) -> Unit) -> Unit = { _, _ -> },
@@ -94,97 +175,34 @@ fun WelcomeScreen(
         }
     }
 
-    // Error Dialog
-    errorMessage?.let { msg ->
-        AlertDialog(
-            onDismissRequest = { errorMessage = null },
-            title = { Text("Invalid Backup File", fontWeight = FontWeight.Bold) },
-            text = { Text(msg) },
-            confirmButton = {
-                TextButton(onClick = { errorMessage = null }) { Text("OK") }
-            }
-        )
-    }
-
-    // Success Dialog
-    if (showSuccessDialog && pendingSnapshot != null) {
-        val snapshotName = pendingSnapshot?.name.orEmpty()
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("✓ Restore Complete", fontWeight = FontWeight.Bold) },
-            text = {
-                Text("Your TermRunway data has been successfully restored on this device.")
-            },
-            confirmButton = {
-                Button(onClick = {
-                    showSuccessDialog = false
-                    onSave(snapshotName.ifBlank { "User" })
-                }) {
-                    Text("Continue", fontWeight = FontWeight.Bold)
-                }
-            }
-        )
-    }
-
-    // Preview / Confirm Dialog
-    pendingSnapshot?.let { snapshot ->
-        if (!showSuccessDialog) {
-            AlertDialog(
-                onDismissRequest = {
+    RestoreBackupDialogs(
+        pendingSnapshot = pendingSnapshot,
+        hasLocalData = hasLocalData,
+        errorMessage = errorMessage,
+        showSuccessDialog = showSuccessDialog,
+        onDismissError = { errorMessage = null },
+        onDismissPreview = {
+            pendingSnapshot = null
+            pendingUri = null
+        },
+        onConfirmRestore = {
+            val uri = pendingUri ?: return@RestoreBackupDialogs
+            onRestoreBackup(uri) { success ->
+                if (success) {
+                    showSuccessDialog = true
+                } else {
                     pendingSnapshot = null
                     pendingUri = null
-                },
-                title = { Text("Restore from Backup", fontWeight = FontWeight.Bold) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Backup details for ${snapshot.name.ifBlank { "User" }}:", fontWeight = FontWeight.SemiBold)
-                        Column(Modifier.padding(start = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("• Transactions: ${snapshot.transactions.size}", style = MaterialTheme.typography.bodyMedium)
-                            Text("• Plans: ${snapshot.plans.size}", style = MaterialTheme.typography.bodyMedium)
-                            Text("• Planned Incomes: ${snapshot.plannedIncomes.size}", style = MaterialTheme.typography.bodyMedium)
-                            Text("• Planned Expenses: ${snapshot.plannedExpenses.size}", style = MaterialTheme.typography.bodyMedium)
-                            Text("• Categories: ${snapshot.categories.size}", style = MaterialTheme.typography.bodyMedium)
-                        }
-                        if (hasLocalData) {
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                "This will replace the current TermRunway data on this device with the selected backup.",
-                                color = RunwayRed,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            val uri = pendingUri ?: return@Button
-                            onRestoreBackup(uri) { success ->
-                                if (success) {
-                                    showSuccessDialog = true
-                                } else {
-                                    pendingSnapshot = null
-                                    pendingUri = null
-                                    errorMessage = "This backup file couldn't be restored. Please choose a valid TermRunway backup."
-                                }
-                            }
-                        }
-                    ) {
-                        Text("Restore", fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = {
-                        pendingSnapshot = null
-                        pendingUri = null
-                    }) {
-                        Text("Cancel")
-                    }
+                    errorMessage = "This backup file couldn't be restored. Please choose a valid TermRunway backup."
                 }
-            )
+            }
+        },
+        onDismissSuccess = {
+            val snapshotName = pendingSnapshot?.name.orEmpty()
+            showSuccessDialog = false
+            onSave(snapshotName.ifBlank { "User" })
         }
-    }
+    )
 
     Scaffold(
         contentWindowInsets = WindowInsets.systemBars

@@ -1,6 +1,7 @@
 package com.termrunway.app.ui.settings
 
 import android.Manifest
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
@@ -16,9 +17,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,9 +28,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.Notifications
@@ -63,13 +64,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.termrunway.app.data.BackupManager
+import com.termrunway.app.data.BackupSnapshot
 import com.termrunway.app.data.CategoryType
 import com.termrunway.app.notifications.NotificationHelper
 import com.termrunway.app.ui.AppUiState
 import com.termrunway.app.ui.ThemeMode
+import com.termrunway.app.ui.onboarding.RestoreBackupDialogs
 import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
-import com.termrunway.app.ui.util.fileDate
 import com.termrunway.app.ui.util.sanitizeFilename
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -82,8 +85,8 @@ fun SettingsScreen(
     onAddCategory: (String, CategoryType) -> Unit,
     onDeleteCategory: (Long) -> Unit,
     onClearData: () -> Unit,
-    onExport: (android.net.Uri) -> Unit,
-    onRestore: (android.net.Uri) -> Unit,
+    onExport: (Uri) -> Unit,
+    onRestore: (Uri) -> Unit,
     onNotificationsToggle: (Boolean) -> Unit,
     onDailyReminderToggle: (Boolean) -> Unit,
     onWeeklyReviewToggle: (Boolean) -> Unit,
@@ -92,12 +95,48 @@ fun SettingsScreen(
     onReminderHourChange: (Int) -> Unit
 ) {
     val context = LocalContext.current
+    var pendingUri by remember { mutableStateOf<Uri?>(null) }
+    var pendingSnapshot by remember { mutableStateOf<BackupSnapshot?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
+
     val createBackup = rememberLauncherForActivityResult(CreateDocument("application/json")) { uri ->
         if (uri != null) onExport(uri)
     }
     val restoreBackup = rememberLauncherForActivityResult(OpenDocument()) { uri ->
-        if (uri != null) onRestore(uri)
+        if (uri != null) {
+            runCatching {
+                BackupManager.read(context.contentResolver, uri)
+            }.onSuccess { snapshot ->
+                pendingUri = uri
+                pendingSnapshot = snapshot
+            }.onFailure {
+                errorMessage = "This backup file couldn't be restored. Please choose a valid TermRunway backup."
+            }
+        }
     }
+
+    RestoreBackupDialogs(
+        pendingSnapshot = pendingSnapshot,
+        hasLocalData = state.transactions.isNotEmpty() || state.plans.isNotEmpty(),
+        errorMessage = errorMessage,
+        showSuccessDialog = showSuccessDialog,
+        onDismissError = { errorMessage = null },
+        onDismissPreview = {
+            pendingSnapshot = null
+            pendingUri = null
+        },
+        onConfirmRestore = {
+            val uri = pendingUri ?: return@RestoreBackupDialogs
+            onRestore(uri)
+            showSuccessDialog = true
+        },
+        onDismissSuccess = {
+            showSuccessDialog = false
+            pendingSnapshot = null
+            pendingUri = null
+        }
+    )
 
     var hasPermission by remember { mutableStateOf(NotificationHelper.hasNotificationPermission(context)) }
     val permissionLauncher = rememberLauncherForActivityResult(RequestPermission()) { granted ->
@@ -371,7 +410,7 @@ fun SettingsScreen(
                 SettingsAction(
                     Icons.Outlined.Backup,
                     "Export backup",
-                    "Save a complete JSON copy of your local data."
+                    "Save a complete backup of your TermRunway financial data."
                 ) {
                     createBackup.launch(sanitizeFilename(state.name, "json"))
                 }
@@ -380,9 +419,9 @@ fun SettingsScreen(
                 SettingsAction(
                     Icons.Outlined.Restore,
                     "Restore backup",
-                    "Replace local data with a validated TermRunway JSON backup."
+                    "Replace local data with a validated TermRunway backup."
                 ) {
-                    restoreBackup.launch(arrayOf("application/json", "text/json", "text/plain"))
+                    restoreBackup.launch(arrayOf("application/json", "text/json", "text/plain", "*/*"))
                 }
             }
             item {
@@ -495,7 +534,7 @@ private fun SettingsAction(
                 Text(title, fontWeight = FontWeight.SemiBold)
                 Text(subtitle, color = RunwayMuted, style = MaterialTheme.typography.bodySmall)
             }
-            Icon(Icons.Outlined.KeyboardArrowRight, null)
+            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, null)
         }
     }
 }
