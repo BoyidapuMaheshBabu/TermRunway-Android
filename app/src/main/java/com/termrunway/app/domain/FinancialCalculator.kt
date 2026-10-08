@@ -78,44 +78,111 @@ object FinancialCalculator {
 
         val expectedIncome = plannedIncome.sumOf { it.amountPaise }
         val plannedExpense = plannedExpenses.sumOf { it.amountPaise }
-        val actualIncome = rangeIncome(transactions, plan.startMs, plan.endMs)
-        val actualExpense = rangeExpense(transactions, plan.startMs, plan.endMs)
+
+        // Time-aware expected income to date
+        val expectedIncomeToDate = when {
+            todayMs < plan.startMs -> 0L
+            todayMs > plan.endMs -> expectedIncome
+            else -> {
+                val todayStart = startOfDay(todayMs)
+                plannedIncome.sumOf { income ->
+                    val incDate = income.expectedDateMs
+                    if (incDate != null) {
+                        if (todayStart >= startOfDay(incDate)) {
+                            income.amountPaise
+                        } else {
+                            0L
+                        }
+                    } else {
+                        if (totalDays <= 0) income.amountPaise
+                        else (income.amountPaise.toDouble() * elapsedDays.toDouble() / totalDays.toDouble()).roundToLong()
+                    }
+                }
+            }
+        }
+
+        // Actual transactions up to today for active plans
+        val actualIncome = when {
+            todayMs < plan.startMs -> 0L
+            todayMs > plan.endMs -> rangeIncome(transactions, plan.startMs, plan.endMs)
+            else -> rangeIncome(transactions, plan.startMs, minOf(plan.endMs, todayMs))
+        }
+        val actualExpense = when {
+            todayMs < plan.startMs -> 0L
+            todayMs > plan.endMs -> rangeExpense(transactions, plan.startMs, plan.endMs)
+            else -> rangeExpense(transactions, plan.startMs, minOf(plan.endMs, todayMs))
+        }
 
         val expectedRemaining = plan.startingMoneyPaise + expectedIncome - plannedExpense
         val actualRemaining = plan.startingMoneyPaise + actualIncome - actualExpense
 
-        val expectedSpendToDate = if (totalDays <= 0) {
-            plannedExpense
-        } else {
-            (plannedExpense.toDouble() * elapsedDays.toDouble() / totalDays.toDouble()).roundToLong()
+        // Time-aware expected spend to date
+        val expectedSpendToDate = when {
+            todayMs < plan.startMs -> 0L
+            todayMs > plan.endMs -> plannedExpense
+            else -> {
+                val todayStart = startOfDay(todayMs)
+                plannedExpenses.sumOf { expense ->
+                    val expDate = expense.expectedDateMs
+                    if (expDate != null) {
+                        if (todayStart >= startOfDay(expDate)) {
+                            expense.amountPaise
+                        } else {
+                            0L
+                        }
+                    } else {
+                        if (totalDays <= 0) expense.amountPaise
+                        else (expense.amountPaise.toDouble() * elapsedDays.toDouble() / totalDays.toDouble()).roundToLong()
+                    }
+                }
+            }
         }
 
         val variance = actualExpense - expectedSpendToDate
         val averageSpend = if (elapsedDays > 0) actualExpense / elapsedDays else 0L
-        val availablePerDay = if (remainingDays > 0) max(0L, actualRemaining) / remainingDays else 0L
 
-        val threshold = max(50_000L, expectedSpendToDate / 5L)
+        // Discretionary safe spending considering future planned commitments
+        val todayStart = startOfDay(todayMs)
+        val futureCommitments = when {
+            todayMs < plan.startMs -> plannedExpense
+            todayMs > plan.endMs -> 0L
+            else -> plannedExpenses.filter { it.expectedDateMs != null && startOfDay(it.expectedDateMs) > todayStart }.sumOf { it.amountPaise }
+        }
+        val pastOrUndatedPlanned = when {
+            todayMs < plan.startMs -> 0L
+            todayMs > plan.endMs -> plannedExpense
+            else -> plannedExpenses.filter { it.expectedDateMs == null || startOfDay(it.expectedDateMs) <= todayStart }.sumOf { it.amountPaise }
+        }
+        val remainingPastOrUndated = max(0L, pastOrUndatedPlanned - actualExpense)
+        val totalRemainingPlannedCommitments = futureCommitments + remainingPastOrUndated
+        val discretionaryRemaining = max(0L, actualRemaining - totalRemainingPlannedCommitments)
+        val availablePerDay = if (remainingDays > 0) discretionaryRemaining / remainingDays else 0L
+
+        val ratio = if (expectedSpendToDate > 0) actualExpense.toDouble() / expectedSpendToDate.toDouble() else null
         val status = when {
             todayMs < plan.startMs -> "Upcoming"
             todayMs > plan.endMs -> "Completed"
             actualRemaining < 0 -> "Overdrawn"
-            variance > threshold -> "Above plan"
-            variance < -threshold -> "Below plan"
+            ratio != null && ratio > 1.05 -> "Above plan"
+            ratio != null && ratio < 0.95 -> "Below plan"
+            expectedSpendToDate == 0L && actualExpense > 0 -> "Above plan"
             else -> "On track"
         }
 
         val guidance = when {
             todayMs < plan.startMs ->
-                "Your plan starts on ${formatDay(plan.startMs)}. Review your expected income and planned expenses."
+                "Your plan starts in ${daysInclusive(todayMs, plan.startMs)} days (${formatDay(plan.startMs)}). Your planned income and expenses are ready for the period."
             todayMs > plan.endMs ->
                 "This plan has ended. Final actual remaining: ${money(actualRemaining)}."
             actualRemaining < 0 ->
                 "Recorded plan spending is above available money. Safe to spend today: ₹0. Review your remaining money and planned expenses."
             remainingDays == 0 ->
                 "The plan ends today. Remaining runway is ${money(actualRemaining)}."
-            variance > threshold ->
+            discretionaryRemaining == 0L && actualRemaining > 0L ->
+                "Most of your remaining money is committed to planned expenses. Suggested safe spending today is ₹0."
+            status == "Above plan" ->
                 "Spending is currently above the pace expected by your plan. Suggested safe spending today is ${money(availablePerDay)}."
-            variance < -threshold ->
+            status == "Below plan" ->
                 "Spending is currently below the pace expected by your plan. Suggested safe spending today is ${money(availablePerDay)}."
             else ->
                 "Your spending pace matches your plan. Suggested safe spending today is ${money(availablePerDay)}."
@@ -123,6 +190,7 @@ object FinancialCalculator {
 
         return PlanMetrics(
             totalExpectedIncomePaise = expectedIncome,
+            expectedIncomeToDatePaise = expectedIncomeToDate,
             totalPlannedExpensePaise = plannedExpense,
             actualIncomePaise = actualIncome,
             actualExpensePaise = actualExpense,
