@@ -164,7 +164,15 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
     }
 
     if (!state.onboardingCompleted) {
-        WelcomeScreen(onSave = viewModel::completeOnboarding)
+        WelcomeScreen(
+            onSave = viewModel::completeOnboarding,
+            onRestoreBackup = { uri, onDone ->
+                viewModel.restoreBackup(context.contentResolver, uri) {
+                    onDone(true)
+                }
+            },
+            hasLocalData = state.transactions.isNotEmpty() || state.plans.isNotEmpty()
+        )
         return
     }
 

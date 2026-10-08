@@ -15,7 +15,11 @@ object BackupManager {
     fun read(resolver: ContentResolver, uri: Uri): BackupSnapshot {
         val input = resolver.openInputStream(uri) ?: throw IOException("Unable to open backup file")
         val text = input.bufferedReader(Charsets.UTF_8).use { it.readText() }
-        return fromJson(JSONObject(text))
+        return fromJsonString(text)
+    }
+
+    fun fromJsonString(jsonText: String): BackupSnapshot {
+        return fromJson(JSONObject(jsonText))
     }
 
     private fun toJson(snapshot: BackupSnapshot): JSONObject {
