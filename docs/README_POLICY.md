@@ -79,4 +79,4 @@ If they disagree:
 1. determine whether the implementation changed intentionally
 2. document the decision if necessary
 3. update the appropriate source
-4. do not silently let the two repositories drift
+4. do not let documentation and implementation drift apart without recording the reason
