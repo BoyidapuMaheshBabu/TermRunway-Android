@@ -111,7 +111,7 @@ AI must treat an explicit statement such as:
 
 as the authoritative completion signal.
 
-Before that explicit confirmation, AI must not mark the phase as completed/established in the documentation in `docs/`, even if the implementation appears finished.
+Before that explicit confirmation, AI must not mark the phase as completed/established in the documentation under `docs/`, even if the implementation appears finished.
 
 When the developer explicitly confirms phase completion, AI should update the relevant phase status and any directly affected canonical product-status documents so that they reflect the confirmed state.
 
@@ -132,7 +132,7 @@ Phase numbering is scoped to the major product version.
 
 Product phases and Android branches are related, but they are not created in bulk.
 
-- The documentation in `docs/` records the planned phases and their exact canonical Android branch names.
+- The `docs/` directory records the planned phases and their exact canonical Android branch names.
 - **V1 branches use `v1/phase/<phase-number>-<phase-name>`. V2 will use `v2/phase/<phase-number>-<phase-name>`.**
 - The Android repository creates **only the next active phase branch** when development begins.
 - Every new phase branch starts from the latest Android `main`.
