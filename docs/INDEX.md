@@ -41,7 +41,7 @@ See [Phase Index](phases/README.md).
 
 ### 🔀 Android Development Branches
 
-The names below are the **canonical Android branch names** recorded in the documentation in `docs/` for the **V1 phase sequence**.
+The names below are the **canonical Android branch names** for the **V1 phase sequence**, recorded in this index and the corresponding phase documents.
 
 **V1 branch convention:** `v1/phase/<phase-number>-<phase-name>`. V2 will use `v2/phase/...`. The Android repository creates them **one at a time**, only when the corresponding phase begins.
 
@@ -64,7 +64,7 @@ The names below are the **canonical Android branch names** recorded in the docum
 | V1 / 15 | [v1/phase/15-v1-finalization](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/15-v1-finalization) *(created when Phase 15 begins)* |
 | 16 | — |
 
-> **Status rule:** A Product phase can be prepared without its Android branch existing. The documentation in `docs/` records the canonical branch name; Android creates only the next active phase branch. Phase numbers are scoped to the major product version: V1 uses Phase 01–15, then V2 restarts at Phase 01. Feature / Refinement Status is determined from actual work, validation, and developer acceptance.
+> **Status rule:** A Product phase can be prepared without its Android branch existing. The phase documents record the canonical branch names; Android creates only the next active phase branch. Phase numbers are scoped to the major product version: V1 uses Phase 01–15, then V2 restarts at Phase 01. Feature / Refinement Status is determined from actual work, validation, and developer acceptance.
 
 ## 🧩 3. Decisions
 
