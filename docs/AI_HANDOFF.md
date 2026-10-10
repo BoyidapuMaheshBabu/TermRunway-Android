@@ -47,7 +47,7 @@ Check the current:
 - build configuration
 - existing implementation of the requested feature
 
-Do not assume that the documentation in `docs/` describes every current implementation detail.
+Do not assume that `docs/` describes every current implementation detail.
 
 ## 🧠 3. Report Understanding Before Implementation
 
@@ -134,7 +134,7 @@ After implementation, review two dimensions:
 
 ## 📝 8. Preserve New Knowledge
 
-Update the documentation in `docs/` only when the work creates durable knowledge.
+Update `docs/` only when the work creates durable knowledge.
 
 Examples:
 
@@ -170,7 +170,7 @@ The current sequence is **V1 Phase 01–15**. V1 ends at V1 Phase 15.
 
 After V1 is explicitly completed and accepted, the next development cycle restarts at **V2 Phase 01**. AI must not invent a V1 Phase 16.
 
-When V2 begins, use the V2 phase identity recorded by the documentation in `docs/` and do not treat V2 Phase 01 as a continuation of V1 history.
+When V2 begins, use the V2 phase identity recorded in the phase index and relevant phase document; do not treat V2 Phase 01 as a continuation of V1 history.
 
 ## 🗂️ Phase Status Interpretation
 
