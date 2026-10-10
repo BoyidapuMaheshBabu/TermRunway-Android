@@ -63,7 +63,7 @@ The output is intentionally lightweight:
 
 **Question → Evidence → Conclusion → Decision**
 
-Long research conversations are not treated as the source of truth. Important conclusions are promoted into the documentation in `docs/`.
+Long research conversations are not treated as the source of truth. Important conclusions are preserved in `docs/`.
 
 ---
 
@@ -119,11 +119,11 @@ Phase numbers are scoped to the major product version.
 
 TermRunway follows a **one-phase-at-a-time branch workflow**.
 
-The documentation in `docs/` records the canonical phase names and the exact Android branch names. The Android repository creates only the branch for the phase that is actually beginning.
+The phase index and phase documents record the canonical phase names and exact Android branch names. The Android repository creates only the branch for the phase that is actually beginning.
 
 Rules:
 
-1. **Use the exact branch name recorded in the documentation in `docs/`.**
+1. **Use the exact branch name recorded in the phase index and phase documents.**
 2. **Use the major-version prefix:** V1 uses `v1/phase/...`; V2 will use `v2/phase/...`.
 3. **Create only the current phase branch.** Do not pre-create future phase branches.
 4. **Start the phase branch from the latest `main`** in TermRunway-Android.
@@ -164,7 +164,7 @@ It preserves:
 
 **Decision → Phase → Branch → Implementation → Commit → Test → Review**
 
-Branches provide focused development. Commits preserve meaningful change history. The documentation in `docs/` preserves decisions that should survive beyond a single conversation.
+Branches provide focused development. Commits preserve meaningful change history. The `docs/` directory preserves decisions that should survive beyond a single conversation.
 
 This makes the project easier to inspect, continue, and explain.
 
