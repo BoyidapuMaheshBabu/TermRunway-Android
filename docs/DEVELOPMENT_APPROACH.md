@@ -67,19 +67,19 @@ Long research conversations are not treated as the source of truth. Important co
 
 ---
 
-## 🧩 3. Separate Product Thinking From Implementation
+## 🧩 3. Keep Product Thinking and Implementation Together
 
-TermRunway uses two repositories with different responsibilities.
+TermRunway now uses **one repository with clear boundaries between documentation and implementation**.
 
-| Repository | Owns |
+| Location | Owns |
 |---|---|
-| 📘 **TermRunway documentation** | Product context, decisions, phases, roadmap, rules, AI handoff, methodology, and durable product knowledge |
-| 📱 **TermRunway-Android** | Kotlin/Compose implementation, tests, build configuration, and release work |
+| 📚 `docs/` | Product context, decisions, phases, roadmap, rules, AI handoff, methodology, and durable product knowledge |
+| 📱 Repository root and `app/` | Kotlin/Compose implementation, tests, build configuration, and release work |
 
-> **documentation in `docs/` = why.**  
-> **Android repository = how.**
+> **`docs/` = why the product behaves as it does.**  
+> **Android source, tests, and build files = how it is implemented.**
 
-This separation makes the project easier to continue across AI tools, accounts, devices, and development environments.
+Keeping both in one repository reduces context splitting while preserving a clear distinction between product decisions and implementation details.
 
 ---
 
@@ -298,8 +298,8 @@ Examples:
 |---|---|
 | 🤖 AI assistants | Research, reasoning, debugging, implementation assistance |
 | 🐙 GitHub | Version control, history, durable knowledge |
-| 📘 Product repo | Product decisions and planning |
-| 📱 Android repo | Working implementation |
+| 📚 `docs/` | Product decisions and planning |
+| 📱 Repository root and `app/` | Working implementation |
 | 🛠️ Android Studio | Build, debug, run |
 | 📲 Physical device | Real-world validation |
 | 🎨 Canva | Presentation and visual communication |
