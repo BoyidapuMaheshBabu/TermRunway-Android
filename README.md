@@ -145,9 +145,20 @@ Native Android Product
 V1 Finalization
 ```
 
-The original web implementation is preserved as a historical prototype:
+### Why `TermRunway-Web` remains public
 
-👉 [TermRunway-Web](https://github.com/BoyidapuMaheshBabu/TermRunway-Web)
+The Web repository is intentionally preserved as a **historical prototype and product-evolution record**, not as a second active product. It shows how the original budgeting idea was tested, where the approach stopped fitting the intended student experience, and why the product direction changed.
+
+The prototype helped reveal several constraints:
+
+- Browser `localStorage` was not the preferred long-term foundation for the intended app.
+- The experience depended on the browser environment, while phone-first usage became the priority.
+- Strong offline behavior and keeping financial data local became core product requirements.
+- Continuing to add features to the web version would have extended an architecture that no longer fit the product direction.
+
+Rather than hide or erase that earlier work, the repository preserves the original implementation and the lessons learned from it. It is useful for tracing the product's history and explaining the engineering trade-off. **The native Android repository remains the only active implementation and source of truth.**
+
+👉 [TermRunway-Web — Historical Prototype](https://github.com/BoyidapuMaheshBabu/TermRunway-Web)
 
 ## 👨‍💻 Developer
 
