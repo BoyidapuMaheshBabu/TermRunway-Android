@@ -139,6 +139,19 @@ V1 Finalization
 
 The web prototype was valuable because it exposed product and architecture limitations. Moving away from it was a product decision, not a failure.
 
+### Why the Web Repository Remains Public
+
+`TermRunway-Web` is kept public as a **historical prototype and product-evolution record**, not as a second active product. Preserving it makes the original approach, experiments, and lessons inspectable instead of erasing the path that led to the current product.
+
+The prototype showed that browser `localStorage` and a browser-dependent experience were not the best long-term fit for the intended phone-first product. Privacy and dependable offline operation became central requirements, so the direction shifted to a native Android app with local data storage.
+
+The two repositories therefore have different statuses:
+
+- **TermRunway-Android** — the active product and implementation source of truth.
+- **TermRunway-Web** — the discontinued original prototype, retained for historical context and to explain the product and architecture trade-offs.
+
+The Web repository should not be treated as a place for new active product features unless that direction is explicitly reconsidered.
+
 ## Product Ownership
 
 The product owner is responsible for:
