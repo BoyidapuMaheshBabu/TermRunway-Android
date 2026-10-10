@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/BoyidapuMaheshBabu/TermRunway-Product">Product Knowledge</a> ·
+  <a href="docs/INDEX.md">Product & Engineering Docs</a> ·
   <a href="https://github.com/BoyidapuMaheshBabu/TermRunway-Web">Original Web Prototype</a>
 </p>
 
@@ -107,25 +107,9 @@ AI is used as a **development accelerator and learning assistant** for implement
 
 Validation includes configured **GitHub Actions** checks for debug builds and unit tests, plus testing on physical Android devices.
 
-## 🗂️ Product Knowledge
+## 📚 Product & Engineering Documentation
 
-The implementation is supported by a separate product repository:
-
-👉 [TermRunway-Product](https://github.com/BoyidapuMaheshBabu/TermRunway-Product)
-
-It preserves:
-
-- product context
-- UX and architecture research
-- durable decisions
-- development phases
-- roadmap
-- product rules
-- AI handoff guidance
-- documentation policy
-
-**Product repository = why / what**  
-**Android repository = how / implementation**
+Product context, decisions, phases, roadmap, and AI handoff are maintained in the [documentation index](docs/INDEX.md), alongside the Android implementation.
 
 ## 🛠️ Development Approach
 
