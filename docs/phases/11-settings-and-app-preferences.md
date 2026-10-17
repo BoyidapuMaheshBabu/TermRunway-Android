@@ -69,27 +69,6 @@ These changes are implementation evidence to review and validate, **not automati
 **Status:** Open — observed during manual testing; root cause still needs confirmation.
 
 **Observed behavior**
-- Restore feedback appears after the app has entered/navigated to another screen, instead of following a clear restore-result flow.
-- In `SettingsScreen.kt`, `onRestore(uri)` is called and `showSuccessDialog` is set immediately afterward. If restoration completes asynchronously, this can show success before the operation has actually succeeded.
-
-**Expected behavior**
-1. Show a progress indicator while the backup is being restored.
-2. Show success only after restoration completes successfully, or an error if it fails.
-3. After the user acknowledges success, navigate to Home and show the restored data.
-
-**Solution options**
-- Preferably, expose a clear restore state/result from the existing ViewModel or restore operation: in progress, success, or failure. Let the UI display the matching feedback and navigate only after success is acknowledged.
-- If the existing restore callback already reports completion, reuse that result to control the dialog instead of treating the callback invocation itself as success.
-
-**Validation**
-- Test a valid backup, an invalid/corrupted backup, and confirm the success message never appears before a successful restore.
-- This entry records the observed behavior and proposed direction; it does not claim the issue is fixed.
-
-### Issue 1 — Backup restore feedback and navigation order
-
-**Status:** Open — observed during manual testing; root cause still needs confirmation.
-
-**Observed behavior**
 - Restore feedback appears after the app has navigated to another screen, rather than following a clear restore-result flow.
 - In `SettingsScreen.kt`, `onRestore(uri)` is called and `showSuccessDialog` is set immediately afterward. If restoration completes asynchronously, this could show success before the operation has actually succeeded.
 
@@ -128,6 +107,49 @@ These changes are implementation evidence to review and validate, **not automati
 - Verify the calculated target date and selected local time across short and long months, leap-year February, time changes, and preference changes.
 - Confirm disabling the monthly reminder cancels pending work and re-enabling it schedules the correct next calendar occurrence.
 - This is a documented requirement and finding, not an implementation fix.
+
+### Issue 3 — Define and guarantee a complete offline user-data backup
+
+**Status:** Open — product requirement clarified; implementation coverage and restore behavior need a complete audit.
+
+**Product intent**
+TermRunway is offline-first. A backup must be a portable local file that lets a user preserve and restore their meaningful app data on the same device or another compatible installation, without logging in or fetching data from a cloud server. Exporting a backup is a snapshot of the user's current data; it is **not** intended to record every edit as a separate transaction version or create an audit log of every interaction.
+
+**Data that should be covered**
+- The user's saved name/profile details.
+- Transactions, including their current saved values and transaction details.
+- Categories, including custom categories and the information needed to retain their type and identity/meaning.
+- Financial plans and their plan inputs, including planned incomes and planned expenses.
+- Plan history, such as completed or past plans and their related data, if the app persists that history separately or could otherwise omit it.
+- Any other persisted user-created financial data that is necessary to reconstruct the user's experience after restore.
+- Relevant app preferences only where product intent says they should travel with the backup; document clearly which preferences are included and which remain device-specific.
+
+**Current implementation evidence**
+- `BackupManager.kt` currently serializes the name, theme mode, transactions, plans, planned incomes, planned expenses, and categories.
+- That is useful existing coverage, but it is not enough by itself to prove that all meaningful user data and plan history are included. The persisted data model and restore path must be checked to determine whether past/completed plans and any separately stored history are already represented.
+- The restore warning must reflect all replaceable local data, not only transactions and plans. For example, custom categories or profile data must not be silently overwritten just because no transactions exist.
+
+**Required behavior**
+1. Define an explicit backup data inventory from the app's persisted models and repositories.
+2. Ensure export writes a consistent snapshot of all in-scope data into the local JSON backup.
+3. Ensure restore validates the file and restores all in-scope records and relationships together, preserving necessary IDs/references or safely remapping them.
+4. Ensure a failed/invalid restore does not leave the app in a partially replaced state.
+5. Explain before confirmation that restore replaces the corresponding local data; never imply that data is being downloaded from a cloud account.
+6. Keep export and restore fully usable offline through the system document picker.
+7. Treat each backup as the current snapshot. Do not add per-edit transaction history unless a separate product requirement is agreed.
+
+**Recommended direction**
+- Audit the persistence models, export serialization, parser/validation, and restore transaction as one end-to-end feature.
+- Add a versioned JSON schema and tests that round-trip a representative dataset containing profile name, default/custom categories, transactions, active and completed/past plans, planned incomes/expenses, and any persisted plan-history records.
+- Include regression tests for empty datasets, category-only/profile-only data, missing optional fields in supported older schema versions, invalid files, and restore failure safety.
+- Verify whether plan history is stored as separate records or is represented by the existing plans/transactions. Do not invent a separate history store if the current product model does not need one.
+
+**Validation**
+- Export a representative dataset, inspect the JSON contents, restore it into a clean test state, and compare all in-scope data and relationships before/after.
+- Confirm that custom categories and user name are restored even when there are no transactions.
+- Confirm that completed/past plan history is preserved wherever it exists in the data model.
+- Confirm that the entire flow works offline and that restoring never depends on a cloud login or server.
+- This is a scope/requirements finding; it does not claim the current implementation is missing every listed field or that any code has been fixed.
 
 ## Acceptance Criteria
 
