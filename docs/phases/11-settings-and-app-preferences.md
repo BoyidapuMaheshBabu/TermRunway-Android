@@ -85,6 +85,50 @@ These changes are implementation evidence to review and validate, **not automati
 - Test a valid backup, an invalid/corrupted backup, and confirm the success message never appears before a successful restore.
 - This entry records the observed behavior and proposed direction; it does not claim the issue is fixed.
 
+### Issue 1 — Backup restore feedback and navigation order
+
+**Status:** Open — observed during manual testing; root cause still needs confirmation.
+
+**Observed behavior**
+- Restore feedback appears after the app has navigated to another screen, rather than following a clear restore-result flow.
+- In `SettingsScreen.kt`, `onRestore(uri)` is called and `showSuccessDialog` is set immediately afterward. If restoration completes asynchronously, this could show success before the operation has actually succeeded.
+
+**Expected behavior**
+1. Show progress while the backup is being restored.
+2. Show success only after restoration completes successfully, or show an error if it fails.
+3. After the user acknowledges success, navigate to Home and display the restored data.
+
+**Recommended direction**
+- Expose or reuse a clear restore state/result from the existing restore operation: in progress, success, or failure.
+- Show the matching feedback and navigate only after successful completion is confirmed and the user acknowledges it.
+
+**Validation**
+- Test a valid backup and an invalid/corrupted backup. Success must never appear before a successful restore.
+- This records the observed behavior and proposed direction; it does not claim the issue is fixed.
+
+### Issue 2 — Monthly reminder must follow calendar months
+
+**Status:** Open — calendar-month behavior agreed; implementation needs correction.
+
+**Confirmed implementation mismatch**
+- `NotificationScheduler.kt` uses `PeriodicWorkRequestBuilder<MonthlyReviewWorker>(30, TimeUnit.DAYS)`, so repeat reminders use a fixed 30-day interval.
+- The initial delay calculation sets the target day to day 1 of the month, which also conflicts with the Settings description: “Remind at the end of the month to review monthly spending.”
+- Therefore, the current implementation does **not** reliably follow real calendar months or month-end dates.
+
+**Required behavior**
+- Schedule the monthly review according to actual calendar-month boundaries and the user's selected reminder time.
+- Handle months with 28, 29, 30, and 31 days correctly. For example, a month-end reminder should fall on February's last day, then March's last day, then April's last day.
+- Do not use a repeating 30-day interval as a substitute for calendar-month scheduling.
+
+**Recommended direction**
+- Use calendar-aware one-time scheduling for the next intended month-end reminder, then schedule the next occurrence after it runs, or use another approach that reliably recalculates each calendar month's target.
+- Respect Android WorkManager's normal execution timing constraints; calendar alignment does not guarantee exact-to-the-minute delivery.
+
+**Validation**
+- Verify the calculated target date and selected local time across short and long months, leap-year February, time changes, and preference changes.
+- Confirm disabling the monthly reminder cancels pending work and re-enabling it schedules the correct next calendar occurrence.
+- This is a documented requirement and finding, not an implementation fix.
+
 ## Acceptance Criteria
 
 ### Profile and preferences
