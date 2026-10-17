@@ -61,6 +61,30 @@ These changes are implementation evidence to review and validate, **not automati
 - Do not describe backup, restore, notifications, or preferences as complete without checking the implementation and testing relevant behavior.
 - Do not perform a broad rewrite solely to make the Settings screen look architecturally different.
 
+
+## Review Findings
+
+### Issue 1 — Backup restore feedback and navigation order
+
+**Status:** Open — observed during manual testing; root cause still needs confirmation.
+
+**Observed behavior**
+- Restore feedback appears after the app has entered/navigated to another screen, instead of following a clear restore-result flow.
+- In `SettingsScreen.kt`, `onRestore(uri)` is called and `showSuccessDialog` is set immediately afterward. If restoration completes asynchronously, this can show success before the operation has actually succeeded.
+
+**Expected behavior**
+1. Show a progress indicator while the backup is being restored.
+2. Show success only after restoration completes successfully, or an error if it fails.
+3. After the user acknowledges success, navigate to Home and show the restored data.
+
+**Solution options**
+- Preferably, expose a clear restore state/result from the existing ViewModel or restore operation: in progress, success, or failure. Let the UI display the matching feedback and navigate only after success is acknowledged.
+- If the existing restore callback already reports completion, reuse that result to control the dialog instead of treating the callback invocation itself as success.
+
+**Validation**
+- Test a valid backup, an invalid/corrupted backup, and confirm the success message never appears before a successful restore.
+- This entry records the observed behavior and proposed direction; it does not claim the issue is fixed.
+
 ## Acceptance Criteria
 
 ### Profile and preferences
