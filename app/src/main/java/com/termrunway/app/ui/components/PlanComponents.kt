@@ -47,7 +47,7 @@ fun PlanHeroCard(
                 Column(Modifier.weight(1f)) {
                     Text(plan.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black)
                     Text(
-                        dateLabel(plan.startMs) + " → " + dateLabel(plan.endMs),
+                        dateLabel(plan.startDate) + " → " + dateLabel(plan.endDate),
                         color = RunwayMuted
                     )
                 }

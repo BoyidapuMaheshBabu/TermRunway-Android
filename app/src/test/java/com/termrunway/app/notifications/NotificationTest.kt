@@ -4,6 +4,7 @@ import com.termrunway.app.ui.AppUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Calendar
 
 class NotificationTest {
 
@@ -41,5 +42,89 @@ class NotificationTest {
         val presetState = customState.copy(reminderHour = 19, reminderMinute = 0)
         assertEquals(19, presetState.reminderHour)
         assertEquals(0, presetState.reminderMinute)
+    }
+
+    @Test
+    fun monthlyReminderTargetFor31DayMonth() {
+        val now = Calendar.getInstance().apply {
+            set(2026, Calendar.JANUARY, 15, 10, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val target = MonthlyReminderCalculator.calculateNextMonthlyReminder(now, 20, 0)
+        assertEquals(2026, target.get(Calendar.YEAR))
+        assertEquals(Calendar.JANUARY, target.get(Calendar.MONTH))
+        assertEquals(31, target.get(Calendar.DAY_OF_MONTH))
+        assertEquals(20, target.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, target.get(Calendar.MINUTE))
+    }
+
+    @Test
+    fun monthlyReminderTargetFor30DayMonth() {
+        val now = Calendar.getInstance().apply {
+            set(2026, Calendar.APRIL, 10, 9, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val target = MonthlyReminderCalculator.calculateNextMonthlyReminder(now, 20, 0)
+        assertEquals(2026, target.get(Calendar.YEAR))
+        assertEquals(Calendar.APRIL, target.get(Calendar.MONTH))
+        assertEquals(30, target.get(Calendar.DAY_OF_MONTH))
+        assertEquals(20, target.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, target.get(Calendar.MINUTE))
+    }
+
+    @Test
+    fun monthlyReminderTargetFor28DayFebruaryNonLeapYear() {
+        val now = Calendar.getInstance().apply {
+            set(2026, Calendar.FEBRUARY, 1, 12, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val target = MonthlyReminderCalculator.calculateNextMonthlyReminder(now, 20, 0)
+        assertEquals(2026, target.get(Calendar.YEAR))
+        assertEquals(Calendar.FEBRUARY, target.get(Calendar.MONTH))
+        assertEquals(28, target.get(Calendar.DAY_OF_MONTH))
+        assertEquals(20, target.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, target.get(Calendar.MINUTE))
+    }
+
+    @Test
+    fun monthlyReminderTargetFor29DayFebruaryLeapYear() {
+        val now = Calendar.getInstance().apply {
+            set(2028, Calendar.FEBRUARY, 1, 12, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val target = MonthlyReminderCalculator.calculateNextMonthlyReminder(now, 20, 0)
+        assertEquals(2028, target.get(Calendar.YEAR))
+        assertEquals(Calendar.FEBRUARY, target.get(Calendar.MONTH))
+        assertEquals(29, target.get(Calendar.DAY_OF_MONTH))
+        assertEquals(20, target.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, target.get(Calendar.MINUTE))
+    }
+
+    @Test
+    fun monthlyReminderTargetWhenTimePassedTodayMovesToNextMonth() {
+        val now = Calendar.getInstance().apply {
+            set(2026, Calendar.JANUARY, 31, 20, 30, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val target = MonthlyReminderCalculator.calculateNextMonthlyReminder(now, 20, 0)
+        assertEquals(2026, target.get(Calendar.YEAR))
+        assertEquals(Calendar.FEBRUARY, target.get(Calendar.MONTH))
+        assertEquals(28, target.get(Calendar.DAY_OF_MONTH))
+        assertEquals(20, target.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, target.get(Calendar.MINUTE))
+    }
+
+    @Test
+    fun monthlyReminderTargetWhenTimePassedLateInMonthMovesToNextMonth() {
+        val now = Calendar.getInstance().apply {
+            set(2026, Calendar.FEBRUARY, 28, 21, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val target = MonthlyReminderCalculator.calculateNextMonthlyReminder(now, 20, 0)
+        assertEquals(2026, target.get(Calendar.YEAR))
+        assertEquals(Calendar.MARCH, target.get(Calendar.MONTH))
+        assertEquals(31, target.get(Calendar.DAY_OF_MONTH))
+        assertEquals(20, target.get(Calendar.HOUR_OF_DAY))
+        assertEquals(0, target.get(Calendar.MINUTE))
     }
 }

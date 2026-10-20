@@ -262,11 +262,11 @@ fun iconForCategory(category: String): ImageVector = when (category.lowercase())
     else -> Icons.Outlined.Paid
 }
 
-fun todayLabel(): String =
-    java.text.SimpleDateFormat("EEEE, dd MMMM", java.util.Locale.getDefault()).format(java.util.Date())
+fun todayLabel(today: java.time.LocalDate = java.time.LocalDate.now()): String =
+    today.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, dd MMMM", java.util.Locale.getDefault()))
 
-fun dateLabel(ms: Long): String =
-    java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date(ms))
+fun dateLabel(date: java.time.LocalDate): String =
+    date.format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy", java.util.Locale.getDefault()))
 
 fun moneyString(paise: Long): String {
     val sign = if (paise < 0) "-" else ""

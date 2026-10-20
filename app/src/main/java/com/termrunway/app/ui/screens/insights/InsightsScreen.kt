@@ -35,7 +35,6 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -64,13 +63,10 @@ import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
 import com.termrunway.app.ui.util.PeriodPreset
 import com.termrunway.app.ui.util.addDays
-import com.termrunway.app.ui.util.endOfDay
 import com.termrunway.app.ui.util.pickDate
 import com.termrunway.app.ui.util.resolvePeriodRange
-import com.termrunway.app.ui.util.startOfDay
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 
@@ -128,8 +124,8 @@ fun InsightsScreen(
 ) {
     val context = LocalContext.current
     var selectedPreset by rememberSaveable { mutableStateOf(PeriodPreset.DAYS_7) }
-    var customStartMs by rememberSaveable { mutableLongStateOf(addDays(System.currentTimeMillis(), -30)) }
-    var customEndMs by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+    var customStart by rememberSaveable { mutableStateOf(LocalDate.now().minusDays(30)) }
+    var customEnd by rememberSaveable { mutableStateOf(LocalDate.now()) }
 
     val periodChoices = remember(state.activePlan) {
         buildList {
@@ -144,23 +140,23 @@ fun InsightsScreen(
         }
     }
 
-    val resolvedRange = remember(selectedPreset, state.activePlan, customStartMs, customEndMs) {
-        resolvePeriodRange(selectedPreset, state.activePlan, customStartMs, customEndMs)
+    val resolvedRange = remember(selectedPreset, state.activePlan, customStart, customEnd) {
+        resolvePeriodRange(selectedPreset, state.activePlan, customStart, customEnd)
     }
 
-    val earliestTxMs = state.transactions.minOfOrNull { it.dateMs }
-    val defaultStartMs = earliestTxMs?.let { startOfDay(it) } ?: startOfDay(addDays(System.currentTimeMillis(), -30))
+    val earliestTxDate = state.transactions.minOfOrNull { it.date }
+    val defaultStartDate = earliestTxDate ?: LocalDate.now().minusDays(30)
 
-    val startMs = resolvedRange.startMs ?: defaultStartMs
-    val endMs = resolvedRange.endMs ?: endOfDay(System.currentTimeMillis())
+    val startDate = resolvedRange.start ?: defaultStartDate
+    val endDate = resolvedRange.end ?: LocalDate.now()
 
-    val income = FinancialCalculator.rangeIncome(state.transactions, startMs, endMs)
-    val expense = FinancialCalculator.rangeExpense(state.transactions, startMs, endMs)
+    val income = FinancialCalculator.rangeIncome(state.transactions, startDate, endDate)
+    val expense = FinancialCalculator.rangeExpense(state.transactions, startDate, endDate)
     val categories = FinancialCalculator.categoryTotals(
         state.transactions,
         TransactionType.EXPENSE,
-        startMs,
-        endMs
+        startDate,
+        endDate
     )
     val maxCategory = categories.values.maxOrNull()?.coerceAtLeast(1) ?: 1
 
@@ -194,13 +190,13 @@ fun InsightsScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
-                        onClick = { pickDate(context, customStartMs) { customStartMs = it } },
+                        onClick = { pickDate(context, customStart) { customStart = it } },
                         modifier = Modifier.weight(1f)
-                    ) { Text("From: " + dateLabel(customStartMs), maxLines = 1) }
+                    ) { Text("From: " + dateLabel(customStart), maxLines = 1) }
                     OutlinedButton(
-                        onClick = { pickDate(context, customEndMs) { customEndMs = it } },
+                        onClick = { pickDate(context, customEnd) { customEnd = it } },
                         modifier = Modifier.weight(1f)
-                    ) { Text("To: " + dateLabel(customEndMs), maxLines = 1) }
+                    ) { Text("To: " + dateLabel(customEnd), maxLines = 1) }
                 }
             }
         }
@@ -217,8 +213,8 @@ fun InsightsScreen(
                     Spacer(Modifier.height(10.dp))
                     MoneyPulseChart(
                         transactions = state.transactions,
-                        startMs = startMs,
-                        endMs = endMs
+                        startDate = startDate,
+                        endDate = endDate
                     )
                 }
             }
@@ -271,16 +267,20 @@ private data class MoneyPulsePoint(
 @Composable
 private fun MoneyPulseChart(
     transactions: List<Transaction>,
-    startMs: Long,
-    endMs: Long
+    startDate: LocalDate,
+    endDate: LocalDate
 ) {
-    val totalDays = FinancialCalculator.daysInclusive(startMs, endMs).coerceAtLeast(1)
-    val points = remember(transactions, startMs, endMs, totalDays) {
+    val totalDays = FinancialCalculator.daysInclusive(startDate, endDate).coerceAtLeast(1)
+    val points = remember(transactions, startDate, endDate, totalDays) {
+        val today = LocalDate.now()
+        val dateFormatter = DateTimeFormatter.ofPattern("dd MMM", Locale.getDefault())
+        val monthFormatter = DateTimeFormatter.ofPattern("MMM yyyy", Locale.getDefault())
+
         if (totalDays <= 14) {
             (0 until totalDays).map { offset ->
-                val day = addDays(startMs, offset)
+                val day = startDate.plusDays(offset.toLong())
                 MoneyPulsePoint(
-                    label = if (FinancialCalculator.sameDay(day, System.currentTimeMillis())) "Today" else SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(day)),
+                    label = if (FinancialCalculator.sameDay(day, today)) "Today" else day.format(dateFormatter),
                     incomePaise = FinancialCalculator.dayIncome(transactions, day),
                     expensePaise = FinancialCalculator.dayExpense(transactions, day)
                 )
@@ -288,33 +288,32 @@ private fun MoneyPulseChart(
         } else if (totalDays <= 90) {
             val weeks = (totalDays + 6) / 7
             (0 until weeks).map { week ->
-                val weekStart = addDays(startMs, week * 7)
+                val weekStart = startDate.plusDays((week * 7).toLong())
                 val length = minOf(7, totalDays - week * 7)
                 MoneyPulsePoint(
-                    label = SimpleDateFormat("dd MMM", Locale.getDefault()).format(Date(weekStart)),
+                    label = weekStart.format(dateFormatter),
                     incomePaise = (0 until length).sumOf { offset ->
-                        FinancialCalculator.dayIncome(transactions, addDays(weekStart, offset))
+                        FinancialCalculator.dayIncome(transactions, weekStart.plusDays(offset.toLong()))
                     },
                     expensePaise = (0 until length).sumOf { offset ->
-                        FinancialCalculator.dayExpense(transactions, addDays(weekStart, offset))
+                        FinancialCalculator.dayExpense(transactions, weekStart.plusDays(offset.toLong()))
                     }
                 )
             }
         } else {
-            val cal = Calendar.getInstance().apply { timeInMillis = startMs }
-            val endCal = Calendar.getInstance().apply { timeInMillis = endMs }
+            var curr = startDate.withDayOfMonth(1)
             val pointsList = mutableListOf<MoneyPulsePoint>()
-            while (cal.timeInMillis <= endCal.timeInMillis || FinancialCalculator.sameDay(cal.timeInMillis, endCal.timeInMillis)) {
-                val monthStart = cal.timeInMillis
-                val monthLabel = SimpleDateFormat("MMM yyyy", Locale.getDefault()).format(Date(monthStart))
+            while (!curr.isAfter(endDate)) {
+                val monthStart = curr
+                val monthLabel = monthStart.format(monthFormatter)
                 var monthInc = 0L
                 var monthExp = 0L
-                val currentMonth = cal.get(Calendar.MONTH)
-                val currentYear = cal.get(Calendar.YEAR)
-                while (cal.get(Calendar.MONTH) == currentMonth && cal.get(Calendar.YEAR) == currentYear && cal.timeInMillis <= endCal.timeInMillis) {
-                    monthInc += FinancialCalculator.dayIncome(transactions, cal.timeInMillis)
-                    monthExp += FinancialCalculator.dayExpense(transactions, cal.timeInMillis)
-                    cal.add(Calendar.DAY_OF_MONTH, 1)
+                val currentMonth = curr.month
+                val currentYear = curr.year
+                while (curr.month == currentMonth && curr.year == currentYear && !curr.isAfter(endDate)) {
+                    monthInc += FinancialCalculator.dayIncome(transactions, curr)
+                    monthExp += FinancialCalculator.dayExpense(transactions, curr)
+                    curr = curr.plusDays(1)
                 }
                 pointsList.add(MoneyPulsePoint(monthLabel, monthInc, monthExp))
             }

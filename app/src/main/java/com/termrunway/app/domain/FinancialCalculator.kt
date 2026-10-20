@@ -2,11 +2,14 @@ package com.termrunway.app.domain
 
 import com.termrunway.app.data.FinancialPlan
 import com.termrunway.app.data.PlanMetrics
-import com.termrunway.app.data.Transaction
-import com.termrunway.app.data.TransactionType
 import com.termrunway.app.data.PlannedExpense
 import com.termrunway.app.data.PlannedIncome
-import java.util.Calendar
+import com.termrunway.app.data.Transaction
+import com.termrunway.app.data.TransactionType
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.roundToLong
 
@@ -18,37 +21,39 @@ object FinancialCalculator {
         totalByType(transactions, TransactionType.INCOME) -
             totalByType(transactions, TransactionType.EXPENSE)
 
-    fun dayIncome(transactions: List<Transaction>, dayMs: Long): Long =
-        transactions.filter { it.type == TransactionType.INCOME && sameDay(it.dateMs, dayMs) }
+    fun dayIncome(transactions: List<Transaction>, day: LocalDate = LocalDate.now()): Long =
+        transactions.filter { it.type == TransactionType.INCOME && sameDay(it.date, day) }
             .sumOf { it.amountPaise }
 
-    fun dayExpense(transactions: List<Transaction>, dayMs: Long): Long =
-        transactions.filter { it.type == TransactionType.EXPENSE && sameDay(it.dateMs, dayMs) }
+    fun dayExpense(transactions: List<Transaction>, day: LocalDate = LocalDate.now()): Long =
+        transactions.filter { it.type == TransactionType.EXPENSE && sameDay(it.date, day) }
             .sumOf { it.amountPaise }
 
-    fun rangeIncome(transactions: List<Transaction>, startMs: Long, endMs: Long): Long =
+    fun rangeIncome(transactions: List<Transaction>, start: LocalDate, end: LocalDate): Long =
         transactions.filter {
             it.type == TransactionType.INCOME &&
-                it.dateMs in startOfDay(startMs)..endOfDay(endMs)
+                !it.date.isBefore(start) &&
+                !it.date.isAfter(end)
         }.sumOf { it.amountPaise }
 
-    fun rangeExpense(transactions: List<Transaction>, startMs: Long, endMs: Long): Long =
+    fun rangeExpense(transactions: List<Transaction>, start: LocalDate, end: LocalDate): Long =
         transactions.filter {
             it.type == TransactionType.EXPENSE &&
-                it.dateMs in startOfDay(startMs)..endOfDay(endMs)
+                !it.date.isBefore(start) &&
+                !it.date.isAfter(end)
         }.sumOf { it.amountPaise }
 
     fun categoryTotals(
         transactions: List<Transaction>,
         type: TransactionType,
-        startMs: Long? = null,
-        endMs: Long? = null
+        start: LocalDate? = null,
+        end: LocalDate? = null
     ): Map<String, Long> {
         return transactions.asSequence()
             .filter { it.type == type }
             .filter {
-                if (startMs == null || endMs == null) true
-                else it.dateMs in startOfDay(startMs)..endOfDay(endMs)
+                if (start == null || end == null) true
+                else !it.date.isBefore(start) && !it.date.isAfter(end)
             }
             .groupingBy { it.category }
             .fold(0L) { acc, transaction -> acc + transaction.amountPaise }
@@ -62,18 +67,18 @@ object FinancialCalculator {
         plannedIncome: List<PlannedIncome>,
         plannedExpenses: List<PlannedExpense>,
         transactions: List<Transaction>,
-        todayMs: Long = System.currentTimeMillis()
+        today: LocalDate = LocalDate.now()
     ): PlanMetrics {
-        val totalDays = daysInclusive(plan.startMs, plan.endMs)
+        val totalDays = daysInclusive(plan.startDate, plan.endDate)
         val remainingDays = when {
-            todayMs < plan.startMs -> totalDays
-            todayMs > plan.endMs -> 0
-            else -> daysInclusive(startOfDay(todayMs), endOfDay(plan.endMs))
+            today.isBefore(plan.startDate) -> totalDays
+            today.isAfter(plan.endDate) -> 0
+            else -> daysInclusive(today, plan.endDate)
         }
         val elapsedDays = when {
-            todayMs < plan.startMs -> 0
-            todayMs > plan.endMs -> totalDays
-            else -> daysInclusive(plan.startMs, todayMs)
+            today.isBefore(plan.startDate) -> 0
+            today.isAfter(plan.endDate) -> totalDays
+            else -> daysInclusive(plan.startDate, today)
         }
 
         val expectedIncome = plannedIncome.sumOf { it.amountPaise }
@@ -81,14 +86,13 @@ object FinancialCalculator {
 
         // Time-aware expected income to date
         val expectedIncomeToDate = when {
-            todayMs < plan.startMs -> 0L
-            todayMs > plan.endMs -> expectedIncome
+            today.isBefore(plan.startDate) -> 0L
+            today.isAfter(plan.endDate) -> expectedIncome
             else -> {
-                val todayStart = startOfDay(todayMs)
                 plannedIncome.sumOf { income ->
-                    val incDate = income.expectedDateMs
+                    val incDate = income.expectedDate
                     if (incDate != null) {
-                        if (todayStart >= startOfDay(incDate)) {
+                        if (!today.isBefore(incDate)) {
                             income.amountPaise
                         } else {
                             0L
@@ -103,14 +107,14 @@ object FinancialCalculator {
 
         // Actual transactions up to today for active plans
         val actualIncome = when {
-            todayMs < plan.startMs -> 0L
-            todayMs > plan.endMs -> rangeIncome(transactions, plan.startMs, plan.endMs)
-            else -> rangeIncome(transactions, plan.startMs, minOf(plan.endMs, todayMs))
+            today.isBefore(plan.startDate) -> 0L
+            today.isAfter(plan.endDate) -> rangeIncome(transactions, plan.startDate, plan.endDate)
+            else -> rangeIncome(transactions, plan.startDate, minOf(plan.endDate, today))
         }
         val actualExpense = when {
-            todayMs < plan.startMs -> 0L
-            todayMs > plan.endMs -> rangeExpense(transactions, plan.startMs, plan.endMs)
-            else -> rangeExpense(transactions, plan.startMs, minOf(plan.endMs, todayMs))
+            today.isBefore(plan.startDate) -> 0L
+            today.isAfter(plan.endDate) -> rangeExpense(transactions, plan.startDate, plan.endDate)
+            else -> rangeExpense(transactions, plan.startDate, minOf(plan.endDate, today))
         }
 
         val expectedRemaining = plan.startingMoneyPaise + expectedIncome - plannedExpense
@@ -118,14 +122,13 @@ object FinancialCalculator {
 
         // Time-aware expected spend to date
         val expectedSpendToDate = when {
-            todayMs < plan.startMs -> 0L
-            todayMs > plan.endMs -> plannedExpense
+            today.isBefore(plan.startDate) -> 0L
+            today.isAfter(plan.endDate) -> plannedExpense
             else -> {
-                val todayStart = startOfDay(todayMs)
                 plannedExpenses.sumOf { expense ->
-                    val expDate = expense.expectedDateMs
+                    val expDate = expense.expectedDate
                     if (expDate != null) {
-                        if (todayStart >= startOfDay(expDate)) {
+                        if (!today.isBefore(expDate)) {
                             expense.amountPaise
                         } else {
                             0L
@@ -142,16 +145,15 @@ object FinancialCalculator {
         val averageSpend = if (elapsedDays > 0) actualExpense / elapsedDays else 0L
 
         // Discretionary safe spending considering future planned commitments
-        val todayStart = startOfDay(todayMs)
         val futureCommitments = when {
-            todayMs < plan.startMs -> plannedExpense
-            todayMs > plan.endMs -> 0L
-            else -> plannedExpenses.filter { it.expectedDateMs != null && startOfDay(it.expectedDateMs) > todayStart }.sumOf { it.amountPaise }
+            today.isBefore(plan.startDate) -> plannedExpense
+            today.isAfter(plan.endDate) -> 0L
+            else -> plannedExpenses.filter { it.expectedDate != null && it.expectedDate.isAfter(today) }.sumOf { it.amountPaise }
         }
         val pastOrUndatedPlanned = when {
-            todayMs < plan.startMs -> 0L
-            todayMs > plan.endMs -> plannedExpense
-            else -> plannedExpenses.filter { it.expectedDateMs == null || startOfDay(it.expectedDateMs) <= todayStart }.sumOf { it.amountPaise }
+            today.isBefore(plan.startDate) -> 0L
+            today.isAfter(plan.endDate) -> plannedExpense
+            else -> plannedExpenses.filter { it.expectedDate == null || !it.expectedDate.isAfter(today) }.sumOf { it.amountPaise }
         }
         val remainingPastOrUndated = max(0L, pastOrUndatedPlanned - actualExpense)
         val totalRemainingPlannedCommitments = futureCommitments + remainingPastOrUndated
@@ -160,8 +162,8 @@ object FinancialCalculator {
 
         val ratio = if (expectedSpendToDate > 0) actualExpense.toDouble() / expectedSpendToDate.toDouble() else null
         val status = when {
-            todayMs < plan.startMs -> "Upcoming"
-            todayMs > plan.endMs -> "Completed"
+            today.isBefore(plan.startDate) -> "Upcoming"
+            today.isAfter(plan.endDate) -> "Completed"
             actualRemaining < 0 -> "Overdrawn"
             ratio != null && ratio > 1.05 -> "Above plan"
             ratio != null && ratio < 0.95 -> "Below plan"
@@ -170,9 +172,9 @@ object FinancialCalculator {
         }
 
         val guidance = when {
-            todayMs < plan.startMs ->
-                "Your plan starts in ${daysInclusive(todayMs, plan.startMs)} days (${formatDay(plan.startMs)}). Your planned income and expenses are ready for the period."
-            todayMs > plan.endMs ->
+            today.isBefore(plan.startDate) ->
+                "Your plan starts in ${daysInclusive(today, plan.startDate)} days (${formatDay(plan.startDate)}). Your planned income and expenses are ready for the period."
+            today.isAfter(plan.endDate) ->
                 "This plan has ended. Final actual remaining: ${money(actualRemaining)}."
             actualRemaining < 0 ->
                 "Recorded plan spending is above available money. Safe to spend today: ₹0. Review your remaining money and planned expenses."
@@ -208,30 +210,16 @@ object FinancialCalculator {
         )
     }
 
-    fun startOfDay(ms: Long): Long =
-        Calendar.getInstance().apply {
-            timeInMillis = ms
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-
-    fun endOfDay(ms: Long): Long = startOfDay(ms) + DAY - 1
-
-    fun daysInclusive(startMs: Long, endMs: Long): Int {
-        if (endMs < startMs) return 0
-        return (((startOfDay(endMs) - startOfDay(startMs)) / DAY) + 1).toInt()
+    fun daysInclusive(start: LocalDate, end: LocalDate): Int {
+        if (end.isBefore(start)) return 0
+        return ChronoUnit.DAYS.between(start, end).toInt() + 1
     }
 
-    fun sameDay(a: Long, b: Long): Boolean = startOfDay(a) == startOfDay(b)
+    fun sameDay(a: LocalDate, b: LocalDate): Boolean = a == b
 
-    private fun formatDay(ms: Long): String =
-        java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault())
-            .format(java.util.Date(ms))
+    private fun formatDay(date: LocalDate): String =
+        date.format(DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault()))
 
     private fun money(paise: Long): String =
-        "₹" + String.format(java.util.Locale.getDefault(), "%,.0f", paise / 100.0)
-
-    private const val DAY = 86_400_000L
+        "₹" + String.format(Locale.getDefault(), "%,.0f", paise / 100.0)
 }
