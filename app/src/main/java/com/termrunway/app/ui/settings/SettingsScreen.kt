@@ -100,7 +100,7 @@ fun SettingsScreen(
     onDeleteCategory: (Long) -> Unit,
     onClearData: () -> Unit,
     onExport: (Uri) -> Unit,
-    onRestore: (Uri) -> Unit,
+    onRestore: (Uri, (Boolean, String?) -> Unit) -> Unit,
     onNotificationsToggle: (Boolean) -> Unit,
     onDailyReminderToggle: (Boolean) -> Unit,
     onWeeklyReviewToggle: (Boolean) -> Unit,
@@ -112,8 +112,10 @@ fun SettingsScreen(
     val context = LocalContext.current
     var pendingUri by remember { mutableStateOf<Uri?>(null) }
     var pendingSnapshot by remember { mutableStateOf<BackupSnapshot?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var isRestoring by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
 
     val createBackup = rememberLauncherForActivityResult(CreateDocument("application/json")) { uri ->
@@ -126,31 +128,61 @@ fun SettingsScreen(
             }.onSuccess { snapshot ->
                 pendingUri = uri
                 pendingSnapshot = snapshot
-            }.onFailure {
-                errorMessage = "This backup file couldn't be restored. Please choose a valid TermRunway backup."
+                showConfirmDialog = false
+                isRestoring = false
+                showSuccessDialog = false
+                errorMessage = null
+            }.onFailure { err ->
+                errorMessage = err.message ?: "This backup file couldn't be restored. Please choose a valid TermRunway backup."
             }
         }
     }
 
+    val hasLocalData = state.transactions.isNotEmpty() ||
+            state.plans.isNotEmpty() ||
+            state.name.isNotBlank() ||
+            state.categories.any { !it.isDefault }
+
     RestoreBackupDialogs(
         pendingSnapshot = pendingSnapshot,
-        hasLocalData = state.transactions.isNotEmpty() || state.plans.isNotEmpty(),
-        errorMessage = errorMessage,
+        hasLocalData = hasLocalData,
+        showConfirmDialog = showConfirmDialog,
+        isRestoring = isRestoring,
         showSuccessDialog = showSuccessDialog,
+        errorMessage = errorMessage,
         onDismissError = { errorMessage = null },
-        onDismissPreview = {
+        onDismissRestoreFlow = {
             pendingSnapshot = null
             pendingUri = null
+            showConfirmDialog = false
+            isRestoring = false
+        },
+        onBackupFirst = {
+            createBackup.launch(sanitizeFilename(state.name, "json"))
+        },
+        onContinueToConfirm = {
+            showConfirmDialog = true
+        },
+        onBackToFirstDialog = {
+            showConfirmDialog = false
         },
         onConfirmRestore = {
             val uri = pendingUri ?: return@RestoreBackupDialogs
-            onRestore(uri)
-            showSuccessDialog = true
+            isRestoring = true
+            onRestore(uri) { success, err ->
+                isRestoring = false
+                if (success) {
+                    showSuccessDialog = true
+                } else {
+                    errorMessage = err ?: "Restore failed. Please choose a valid TermRunway backup."
+                }
+            }
         },
         onDismissSuccess = {
             showSuccessDialog = false
             pendingSnapshot = null
             pendingUri = null
+            showConfirmDialog = false
         }
     )
 

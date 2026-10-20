@@ -46,7 +46,6 @@ import com.termrunway.app.ui.components.moneyString
 import com.termrunway.app.ui.theme.RunwayMint
 import com.termrunway.app.ui.theme.RunwayMuted
 import com.termrunway.app.ui.theme.RunwayRed
-import com.termrunway.app.ui.util.endOfDay
 
 @Composable
 fun PlanScreen(
@@ -116,7 +115,7 @@ fun PlanScreen(
 
             item { SectionTitle("Recent plan activity") }
             val planTransactions = state.transactions.filter {
-                it.dateMs in active.startMs..endOfDay(active.endMs)
+                !it.date.isBefore(active.startDate) && !it.date.isAfter(active.endDate)
             }.take(5)
 
             if (planTransactions.isEmpty()) {
@@ -140,7 +139,7 @@ fun PlanScreen(
                             Column(Modifier.weight(1f)) {
                                 Text(plan.name, fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    dateLabel(plan.startMs) + " → " + dateLabel(plan.endMs),
+                                    dateLabel(plan.startDate) + " → " + dateLabel(plan.endDate),
                                     color = RunwayMuted,
                                     style = MaterialTheme.typography.labelSmall
                                 )

@@ -295,7 +295,7 @@ private fun HomePlanHeroCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "${dateLabel(plan.startMs)} → ${dateLabel(plan.endMs)} · ${metrics.status}",
+                        "${dateLabel(plan.startDate)} → ${dateLabel(plan.endDate)} · ${metrics.status}",
                         style = MaterialTheme.typography.bodySmall,
                         color = RunwayMuted
                     )

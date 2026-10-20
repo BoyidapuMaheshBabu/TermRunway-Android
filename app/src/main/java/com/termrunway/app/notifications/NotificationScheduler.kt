@@ -2,16 +2,43 @@ package com.termrunway.app.notifications
 
 import android.content.Context
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.termrunway.app.data.PreferencesKeys.DAILY_REMINDER_KEY
+import com.termrunway.app.data.PreferencesKeys.MONTHLY_REVIEW_KEY
+import com.termrunway.app.data.PreferencesKeys.NOTIFICATIONS_ENABLED_KEY
+import com.termrunway.app.data.PreferencesKeys.PLAN_ENDING_KEY
+import com.termrunway.app.data.PreferencesKeys.REMINDER_HOUR_KEY
+import com.termrunway.app.data.PreferencesKeys.REMINDER_MINUTE_KEY
+import com.termrunway.app.data.PreferencesKeys.WEEKLY_REVIEW_KEY
+import com.termrunway.app.data.termRunwayDataStore
+import kotlinx.coroutines.flow.first
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 object NotificationScheduler {
-    private const val DAILY_WORK_TAG = "termrunway_daily_reminder"
-    private const val WEEKLY_WORK_TAG = "termrunway_weekly_review"
-    private const val MONTHLY_WORK_TAG = "termrunway_monthly_review"
-    private const val PLAN_PROGRESS_WORK_TAG = "termrunway_plan_progress"
+    const val DAILY_WORK_TAG = "termrunway_daily_reminder"
+    const val WEEKLY_WORK_TAG = "termrunway_weekly_review"
+    const val MONTHLY_WORK_TAG = "termrunway_monthly_review"
+    const val PLAN_PROGRESS_WORK_TAG = "termrunway_plan_progress"
+
+    suspend fun syncFromPreferences(context: Context) {
+        runCatching {
+            val prefs = context.termRunwayDataStore.data.first()
+            syncReminders(
+                context = context,
+                masterEnabled = prefs[NOTIFICATIONS_ENABLED_KEY] ?: true,
+                dailyEnabled = prefs[DAILY_REMINDER_KEY] ?: true,
+                weeklyEnabled = prefs[WEEKLY_REVIEW_KEY] ?: true,
+                monthlyEnabled = prefs[MONTHLY_REVIEW_KEY] ?: true,
+                planEndingEnabled = prefs[PLAN_ENDING_KEY] ?: true,
+                targetHour = prefs[REMINDER_HOUR_KEY] ?: 20,
+                targetMinute = prefs[REMINDER_MINUTE_KEY] ?: 0
+            )
+        }
+    }
 
     fun syncReminders(
         context: Context,
@@ -67,21 +94,26 @@ object NotificationScheduler {
             workManager.cancelAllWorkByTag(WEEKLY_WORK_TAG)
         }
 
-        // Monthly Review (Every 30 days)
+        // Monthly Review (Schedules for the last calendar day of each month)
+        workManager.cancelUniqueWork(MONTHLY_WORK_TAG)
+        workManager.cancelAllWorkByTag(MONTHLY_WORK_TAG)
+
         if (monthlyEnabled) {
-            val initialDelay = calculateMonthlyDelay(targetHour, targetMinute)
-            val monthlyWork = PeriodicWorkRequestBuilder<MonthlyReviewWorker>(30, TimeUnit.DAYS)
+            val initialDelay = MonthlyReminderCalculator.calculateMonthlyDelayMs(
+                nowMs = System.currentTimeMillis(),
+                targetHour = targetHour,
+                targetMinute = targetMinute
+            )
+            val monthlyWork = OneTimeWorkRequestBuilder<MonthlyReviewWorker>()
                 .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
                 .addTag(MONTHLY_WORK_TAG)
                 .build()
 
-            workManager.enqueueUniquePeriodicWork(
+            workManager.enqueueUniqueWork(
                 MONTHLY_WORK_TAG,
-                ExistingPeriodicWorkPolicy.UPDATE,
+                ExistingWorkPolicy.REPLACE,
                 monthlyWork
             )
-        } else {
-            workManager.cancelAllWorkByTag(MONTHLY_WORK_TAG)
         }
 
         // Plan Progress Updates
@@ -127,21 +159,6 @@ object NotificationScheduler {
         }
         if (target.before(now)) {
             target.add(Calendar.WEEK_OF_YEAR, 1)
-        }
-        return target.timeInMillis - now.timeInMillis
-    }
-
-    private fun calculateMonthlyDelay(targetHour: Int, targetMinute: Int): Long {
-        val now = Calendar.getInstance()
-        val target = Calendar.getInstance().apply {
-            set(Calendar.DAY_OF_MONTH, 1)
-            set(Calendar.HOUR_OF_DAY, targetHour)
-            set(Calendar.MINUTE, targetMinute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        if (target.before(now)) {
-            target.add(Calendar.MONTH, 1)
         }
         return target.timeInMillis - now.timeInMillis
     }

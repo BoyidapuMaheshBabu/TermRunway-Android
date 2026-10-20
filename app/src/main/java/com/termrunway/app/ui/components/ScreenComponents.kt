@@ -156,8 +156,8 @@ fun TransactionRow(transaction: Transaction, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    if (transaction.description.isBlank()) dateLabel(transaction.dateMs)
-                    else transaction.category + " · " + dateLabel(transaction.dateMs),
+                    if (transaction.description.isBlank()) dateLabel(transaction.date)
+                    else transaction.category + " · " + dateLabel(transaction.date),
                     color = RunwayMuted,
                     style = MaterialTheme.typography.labelSmall
                 )
