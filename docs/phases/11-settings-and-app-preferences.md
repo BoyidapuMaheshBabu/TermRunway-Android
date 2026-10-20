@@ -2,8 +2,10 @@
 
 ## Status
 
-**Phase / Branch Status:** Prepared  
-**Feature / Refinement Status:** Current work in progress; developer acceptance pending
+**Phase / Branch Status:** ✅ Completed  
+**Feature / Refinement Status:** ✅ Completed — developer accepted after physical-device testing on 2026-10-20
+
+**Developer acceptance note (2026-10-20):** The developer confirms that Phase 11 is complete and has been tested on a physical Android device. Findings and unchecked criteria recorded below come from an earlier documentation review and are not, by themselves, proof of a current defect in the accepted branch. Do not change the accepted Phase 11 implementation solely because of those notes; re-verify any item against the accepted baseline before treating it as current.
 
 ## Objective
 
@@ -205,8 +207,8 @@ TermRunway is offline-first. A backup must be a portable local file that lets a 
 
 ## Current State
 
-The Product phase is prepared. The Android Phase 11 branch exists and contains in-progress implementation commits. The phase remains **in progress until the work is reviewed, validated, and explicitly accepted by the developer**.
+The developer accepted Phase 11 on 2026-10-20 after physical-device testing. Preserve `v1/phase/11-settings-and-app-preferences` as the accepted implementation baseline. Findings above that predate this acceptance must be re-verified against that baseline before being treated as current defects.
 
 ## Completion
 
-**Not completed. Developer acceptance is still required.**
+**Completed — developer acceptance recorded on 2026-10-20 following physical-device testing.**
