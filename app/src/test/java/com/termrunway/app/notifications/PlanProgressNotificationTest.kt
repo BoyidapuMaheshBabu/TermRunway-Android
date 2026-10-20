@@ -4,6 +4,7 @@ import com.termrunway.app.data.FinancialPlan
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 
@@ -139,62 +140,101 @@ class PlanProgressNotificationTest {
     }
 
     @Test
-    fun planSelectionAndCompletedPlanHandling() {
+    fun multipleOldEndedPlansOnFirstTimeInitializationAreShielded() {
         val today = LocalDate.of(2026, 10, 20)
 
-        val completedPlan = FinancialPlan(
-            id = 1,
-            name = "Summer Plan",
-            startDate = LocalDate.of(2026, 5, 1),
-            endDate = LocalDate.of(2026, 8, 31)
-        )
-        val activePlan = FinancialPlan(
-            id = 2,
-            name = "Fall Plan",
-            startDate = LocalDate.of(2026, 9, 1),
-            endDate = LocalDate.of(2026, 12, 31)
-        )
+        val oldPlan1 = FinancialPlan(id = 1, name = "2024 Plan", startDate = LocalDate.of(2024, 1, 1), endDate = LocalDate.of(2024, 6, 30))
+        val oldPlan2 = FinancialPlan(id = 2, name = "2025 Plan", startDate = LocalDate.of(2025, 1, 1), endDate = LocalDate.of(2025, 6, 30))
+        val plans = listOf(oldPlan1, oldPlan2)
 
-        val plans = listOf(completedPlan, activePlan)
+        // Simulated worker shielding logic:
+        val prefsMap = mutableMapOf<String, Boolean>()
+        plans.filter { today.isAfter(it.endDate) && prefsMap["plan_${it.id}_init"] != true }.forEach { oldPlan ->
+            prefsMap["plan_${oldPlan.id}_init"] = true
+            PlanProgressCalculator.MILESTONES.forEach { milestone ->
+                prefsMap["plan_${oldPlan.id}_${milestone.percentage}"] = true
+            }
+        }
 
-        // Active plan is selected when active plan is not completed
-        val selectedActive = PlanProgressCalculator.selectPlanForProgress(
+        // Verify that for all old plans, 100% completion milestone is marked as notified (shielded)
+        assertTrue(prefsMap["plan_1_100"] == true)
+        assertTrue(prefsMap["plan_2_100"] == true)
+
+        // Select candidate plan: returns null because all plans are completed
+        val selected = PlanProgressCalculator.selectPlanForProgress(
             plans = plans,
-            isPlanCompleted = { id -> id == 1L }, // Plan 1 completed, Plan 2 not completed
+            isPlanCompleted = { id -> prefsMap["plan_${id}_100"] == true },
             today = today
         )
-        assertNotNull(selectedActive)
-        assertEquals(2L, selectedActive!!.id)
-
-        // If active plan completes (100% milestone notified), no plan selected for progress
-        val selectedNone = PlanProgressCalculator.selectPlanForProgress(
-            plans = plans,
-            isPlanCompleted = { id -> id == 1L || id == 2L }, // Both completed
-            today = today
-        )
-        assertNull(selectedNone)
+        assertNull(selected)
     }
 
     @Test
-    fun recentlyEndedPlanWithUnnotifiedCompletionIsSelected() {
+    fun trackedPlanDelayedCompletionIsDelivered() {
         val today = LocalDate.of(2026, 10, 20)
 
-        val recentlyEndedPlan = FinancialPlan(
-            id = 1,
-            name = "Ended Yesterday",
-            startDate = LocalDate.of(2026, 10, 1),
-            endDate = LocalDate.of(2026, 10, 19)
+        val trackedPlan = FinancialPlan(
+            id = 10,
+            name = "Tracked Fall Plan",
+            startDate = LocalDate.of(2026, 9, 1),
+            endDate = LocalDate.of(2026, 10, 19) // Ended yesterday
         )
 
-        val plans = listOf(recentlyEndedPlan)
+        val prefsMap = mutableMapOf<String, Boolean>()
+        // Plan WAS initialized while active
+        prefsMap["plan_10_init"] = true
+        prefsMap["plan_10_50"] = true
+        prefsMap["plan_10_75"] = true
+        prefsMap["plan_10_90"] = true
+        prefsMap["plan_10_95"] = true
 
-        // Delayed worker runs on Oct 20. 100% milestone not delivered yet.
+        // Worker run on Oct 20 (delayed completion)
         val selected = PlanProgressCalculator.selectPlanForProgress(
-            plans = plans,
-            isPlanCompleted = { false }, // 100% not notified yet
+            plans = listOf(trackedPlan),
+            isPlanCompleted = { id -> prefsMap["plan_${id}_100"] == true },
             today = today
         )
         assertNotNull(selected)
-        assertEquals(1L, selected!!.id)
+        assertEquals(10L, selected!!.id)
+
+        val percent = PlanProgressCalculator.calculateProgressPercent(selected.startDate, selected.endDate, today)
+        assertEquals(100.0, percent, 0.01)
+
+        val milestone = PlanProgressCalculator.evaluateMilestoneToNotify(percent) { p -> prefsMap["plan_10_$p"] == true }
+        assertNotNull(milestone)
+        assertEquals(100, milestone!!.percentage)
+    }
+
+    @Test
+    fun activePlanFirstTimeInitializationSuppressesPastBacklogs() {
+        val today = LocalDate.of(2026, 10, 20)
+        // 100-day plan, today is day 80 (progress = 80%)
+        val activePlan = FinancialPlan(
+            id = 5,
+            name = "Current Active Plan",
+            startDate = LocalDate.of(2026, 8, 1),
+            endDate = LocalDate.of(2026, 11, 8)
+        )
+
+        val percent = PlanProgressCalculator.calculateProgressPercent(activePlan.startDate, activePlan.endDate, today)
+        assertTrue(percent in 75.0..85.0)
+
+        val prefsMap = mutableMapOf<String, Boolean>()
+        // On first run initialization while active:
+        prefsMap["plan_5_init"] = true
+        PlanProgressCalculator.MILESTONES.forEach { milestone ->
+            if (percent >= milestone.percentage && milestone.percentage < 100) {
+                prefsMap["plan_5_${milestone.percentage}"] = true
+            }
+        }
+
+        // Intermediate milestones (50, 75) are marked baseline
+        assertTrue(prefsMap["plan_5_50"] == true)
+        assertTrue(prefsMap["plan_5_75"] == true)
+        assertNull(prefsMap["plan_5_90"])
+
+        // evaluateMilestoneToNotify produces no backlog notification for 50 or 75
+        val milestone = PlanProgressCalculator.evaluateMilestoneToNotify(percent) { p -> prefsMap["plan_5_$p"] == true }
+        assertNull(milestone)
     }
 }

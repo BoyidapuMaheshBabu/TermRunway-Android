@@ -75,6 +75,15 @@ class PlanProgressWorker(
         val today = LocalDate.now()
         val prefs = applicationContext.getSharedPreferences("termrunway_milestones", Context.MODE_PRIVATE)
 
+        // Shield old uninitialized historical plans so they never fire completion notifications
+        plans.filter { today.isAfter(it.endDate) && !prefs.getBoolean("plan_${it.id}_init", false) }.forEach { oldPlan ->
+            val editor = prefs.edit().putBoolean("plan_${oldPlan.id}_init", true)
+            PlanProgressCalculator.MILESTONES.forEach { milestone ->
+                editor.putBoolean("plan_${oldPlan.id}_${milestone.percentage}", true)
+            }
+            editor.apply()
+        }
+
         val targetPlan = PlanProgressCalculator.selectPlanForProgress(
             plans = plans,
             isPlanCompleted = { planId -> prefs.getBoolean("plan_${planId}_100", false) },

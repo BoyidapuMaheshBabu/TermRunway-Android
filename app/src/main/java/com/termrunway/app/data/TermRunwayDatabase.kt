@@ -78,38 +78,33 @@ class TermRunwayDatabase(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("PRAGMA foreign_keys=OFF;")
-        try {
-            if (oldVersion < 2) {
-                db.execSQL("""
-                    CREATE TABLE categories_new (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT NOT NULL,
-                        type TEXT NOT NULL,
-                        icon_key TEXT NOT NULL,
-                        is_default INTEGER NOT NULL DEFAULT 0,
-                        UNIQUE(type, name)
-                    )
-                """.trimIndent())
+        if (oldVersion < 2) {
+            db.execSQL("""
+                CREATE TABLE categories_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    icon_key TEXT NOT NULL,
+                    is_default INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(type, name)
+                )
+            """.trimIndent())
 
-                db.execSQL("""
-                    INSERT OR IGNORE INTO categories_new (id, name, type, icon_key, is_default)
-                    SELECT id, name, type, icon_key, is_default FROM categories
-                """.trimIndent())
+            db.execSQL("""
+                INSERT OR IGNORE INTO categories_new (id, name, type, icon_key, is_default)
+                SELECT id, name, type, icon_key, is_default FROM categories
+            """.trimIndent())
 
-                db.execSQL("DROP TABLE categories")
-                db.execSQL("ALTER TABLE categories_new RENAME TO categories")
+            db.execSQL("DROP TABLE categories")
+            db.execSQL("ALTER TABLE categories_new RENAME TO categories")
 
-                seedCategories(db)
-            }
-
-            if (oldVersion < 3) {
-                migrateToVersion3(db)
-            }
-            createIndices(db)
-        } finally {
-            db.execSQL("PRAGMA foreign_keys=ON;")
+            seedCategories(db)
         }
+
+        if (oldVersion < 3) {
+            migrateToVersion3(db)
+        }
+        createIndices(db)
     }
 
     private fun createIndices(db: SQLiteDatabase) {
@@ -121,7 +116,7 @@ class TermRunwayDatabase(context: Context) :
     private fun migrateToVersion3(db: SQLiteDatabase) {
         val zone = ZoneId.systemDefault()
 
-        // 1. Transactions migration
+        // 1. Create all _v3 tables
         db.execSQL("""
             CREATE TABLE transactions_v3 (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -134,6 +129,41 @@ class TermRunwayDatabase(context: Context) :
             )
         """.trimIndent())
 
+        db.execSQL("""
+            CREATE TABLE plans_v3 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                start_date_str TEXT NOT NULL,
+                end_date_str TEXT NOT NULL,
+                starting_money_paise INTEGER NOT NULL DEFAULT 0,
+                created_at_ms INTEGER NOT NULL
+            )
+        """.trimIndent())
+
+        db.execSQL("""
+            CREATE TABLE planned_income_v3 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_id INTEGER NOT NULL,
+                source TEXT NOT NULL,
+                amount_paise INTEGER NOT NULL CHECK(amount_paise >= 0),
+                expected_date_str TEXT,
+                FOREIGN KEY(plan_id) REFERENCES plans_v3(id) ON DELETE CASCADE
+            )
+        """.trimIndent())
+
+        db.execSQL("""
+            CREATE TABLE planned_expense_v3 (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                plan_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                amount_paise INTEGER NOT NULL CHECK(amount_paise >= 0),
+                expected_date_str TEXT,
+                frequency TEXT NOT NULL DEFAULT 'once',
+                FOREIGN KEY(plan_id) REFERENCES plans_v3(id) ON DELETE CASCADE
+            )
+        """.trimIndent())
+
+        // 2. Populate transactions_v3
         db.rawQuery("SELECT id, type, amount_paise, category, description, date_ms, created_at_ms FROM transactions", null).use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
@@ -157,21 +187,8 @@ class TermRunwayDatabase(context: Context) :
                 db.insertOrThrow("transactions_v3", null, values)
             }
         }
-        db.execSQL("DROP TABLE transactions")
-        db.execSQL("ALTER TABLE transactions_v3 RENAME TO transactions")
 
-        // 2. Plans migration
-        db.execSQL("""
-            CREATE TABLE plans_v3 (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                start_date_str TEXT NOT NULL,
-                end_date_str TEXT NOT NULL,
-                starting_money_paise INTEGER NOT NULL DEFAULT 0,
-                created_at_ms INTEGER NOT NULL
-            )
-        """.trimIndent())
-
+        // 3. Populate plans_v3
         db.rawQuery("SELECT id, name, start_ms, end_ms, starting_money_paise, created_at_ms FROM plans", null).use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
@@ -195,22 +212,9 @@ class TermRunwayDatabase(context: Context) :
                 db.insertOrThrow("plans_v3", null, values)
             }
         }
-        db.execSQL("DROP TABLE plans")
-        db.execSQL("ALTER TABLE plans_v3 RENAME TO plans")
 
-        // 3. Planned Income migration
-        db.execSQL("""
-            CREATE TABLE planned_income_v3 (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                plan_id INTEGER NOT NULL,
-                source TEXT NOT NULL,
-                amount_paise INTEGER NOT NULL CHECK(amount_paise >= 0),
-                expected_date_str TEXT,
-                FOREIGN KEY(plan_id) REFERENCES plans(id) ON DELETE CASCADE
-            )
-        """.trimIndent())
-
-        db.rawQuery("SELECT id, plan_id, source, amount_paise, expected_date_ms FROM planned_income", null).use { cursor ->
+        // 4. Populate planned_income_v3
+        db.rawQuery("SELECT id, plan_id, source, amount_paise, expected_date_ms FROM planned_income WHERE plan_id IN (SELECT id FROM plans_v3)", null).use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
                 val planId = cursor.getLong(1)
@@ -231,23 +235,9 @@ class TermRunwayDatabase(context: Context) :
                 db.insertOrThrow("planned_income_v3", null, values)
             }
         }
-        db.execSQL("DROP TABLE planned_income")
-        db.execSQL("ALTER TABLE planned_income_v3 RENAME TO planned_income")
 
-        // 4. Planned Expense migration
-        db.execSQL("""
-            CREATE TABLE planned_expense_v3 (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                plan_id INTEGER NOT NULL,
-                category TEXT NOT NULL,
-                amount_paise INTEGER NOT NULL CHECK(amount_paise >= 0),
-                expected_date_str TEXT,
-                frequency TEXT NOT NULL DEFAULT 'once',
-                FOREIGN KEY(plan_id) REFERENCES plans(id) ON DELETE CASCADE
-            )
-        """.trimIndent())
-
-        db.rawQuery("SELECT id, plan_id, category, amount_paise, expected_date_ms, frequency FROM planned_expense", null).use { cursor ->
+        // 5. Populate planned_expense_v3
+        db.rawQuery("SELECT id, plan_id, category, amount_paise, expected_date_ms, frequency FROM planned_expense WHERE plan_id IN (SELECT id FROM plans_v3)", null).use { cursor ->
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(0)
                 val planId = cursor.getLong(1)
@@ -270,7 +260,19 @@ class TermRunwayDatabase(context: Context) :
                 db.insertOrThrow("planned_expense_v3", null, values)
             }
         }
+
+        // 6. Drop child tables first
+        db.execSQL("DROP TABLE planned_income")
         db.execSQL("DROP TABLE planned_expense")
+
+        // 7. Drop parent tables second
+        db.execSQL("DROP TABLE plans")
+        db.execSQL("DROP TABLE transactions")
+
+        // 8. Rename _v3 tables to final names
+        db.execSQL("ALTER TABLE transactions_v3 RENAME TO transactions")
+        db.execSQL("ALTER TABLE plans_v3 RENAME TO plans")
+        db.execSQL("ALTER TABLE planned_income_v3 RENAME TO planned_income")
         db.execSQL("ALTER TABLE planned_expense_v3 RENAME TO planned_expense")
     }
 
