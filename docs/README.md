@@ -13,7 +13,7 @@ This folder preserves TermRunway's durable product context, UX rules, decisions,
 - **Privacy direction** — data stays local; no account, bank connection, or required backend.
 - **Engineering direction** — Kotlin, Jetpack Compose, local persistence, integer paise for monetary values, and real-device validation.
 
-V1 uses phases 01–15. V1 phases 01–10 are completed; Phase 11 is the current priority according to the project state recorded in these documents. Saving Goals remain future scope unless their status is explicitly updated.
+V1 uses phases 01–15. V1 Phases 01–13 are implemented and developer-accepted. V1 Phase 14 — Testing and Release Readiness — is next; create its development branch from the latest `main` when work begins. V1 Phase 15 remains the final consolidation phase. Saving Goals remains a proposed V2 candidate, not approved V1 scope.
 
 ## Start Here
 

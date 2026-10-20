@@ -6,7 +6,7 @@
 
 **TermRunway Android 1.0.0**
 
-Status: **Working product / V1 finalization**
+Status: **Working product / V1 testing and release readiness**
 
 **Phase numbering:** Current cycle = **V1 Phase 01–15**. After V1 acceptance, the next cycle begins at **V2 Phase 01**.
 
@@ -99,9 +99,15 @@ After V1 completion, do not continue to Phase 16. The next major cycle restarts 
 
 ## Current Priority
 
-**Current active phase: V1 Phase 12 — UI/UX Polish.**
+**Last completed and accepted phase: V1 Phase 13 — Performance and Reliability.**
 
-V1 Phases 01–11 have been completed and developer-accepted. Phase 11 was accepted after physical-device testing on 2026-10-20. Phase 12 is active on [`v1/phase/12-ui-ux-polish`](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/12-ui-ux-polish), based on the accepted Phase 11 implementation. The current priority is visual consistency, interaction quality, hierarchy, and screen-level usability—not new feature expansion.
+V1 Phases 01–13 have been implemented and developer-accepted. Phase 13 is merged into `main` through [PR #26](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/pull/26). The developer confirmed physical-device testing and acceptance on **2026-10-20**. The merge's [GitHub Actions run](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/actions/runs/39406500661) passed both the unit-test and debug APK build steps.
+
+**Next phase: V1 Phase 14 — Testing and Release Readiness.**
+
+Its phase plan is prepared, but its development branch has not been created. Create `v1/phase/14-testing-and-release-readiness` from the latest `main` only when Phase 14 begins. Focus on validating real user workflows, financial calculations, migration and backup/restore safety, notifications, regression behavior, and release readiness. Do not expand product scope without an accepted product decision.
+
+V1 Phase 15 remains the final consolidation phase after Phase 14. There is intentionally no V1 Phase 16.
 
 ## README Status
 
