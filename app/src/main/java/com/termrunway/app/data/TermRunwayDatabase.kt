@@ -74,35 +74,48 @@ class TermRunwayDatabase(context: Context) :
         """.trimIndent())
 
         seedCategories(db)
+        createIndices(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion < 2) {
-            db.execSQL("""
-                CREATE TABLE categories_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    icon_key TEXT NOT NULL,
-                    is_default INTEGER NOT NULL DEFAULT 0,
-                    UNIQUE(type, name)
-                )
-            """.trimIndent())
+        db.execSQL("PRAGMA foreign_keys=OFF;")
+        try {
+            if (oldVersion < 2) {
+                db.execSQL("""
+                    CREATE TABLE categories_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        icon_key TEXT NOT NULL,
+                        is_default INTEGER NOT NULL DEFAULT 0,
+                        UNIQUE(type, name)
+                    )
+                """.trimIndent())
 
-            db.execSQL("""
-                INSERT OR IGNORE INTO categories_new (id, name, type, icon_key, is_default)
-                SELECT id, name, type, icon_key, is_default FROM categories
-            """.trimIndent())
+                db.execSQL("""
+                    INSERT OR IGNORE INTO categories_new (id, name, type, icon_key, is_default)
+                    SELECT id, name, type, icon_key, is_default FROM categories
+                """.trimIndent())
 
-            db.execSQL("DROP TABLE categories")
-            db.execSQL("ALTER TABLE categories_new RENAME TO categories")
+                db.execSQL("DROP TABLE categories")
+                db.execSQL("ALTER TABLE categories_new RENAME TO categories")
 
-            seedCategories(db)
+                seedCategories(db)
+            }
+
+            if (oldVersion < 3) {
+                migrateToVersion3(db)
+            }
+            createIndices(db)
+        } finally {
+            db.execSQL("PRAGMA foreign_keys=ON;")
         }
+    }
 
-        if (oldVersion < 3) {
-            migrateToVersion3(db)
-        }
+    private fun createIndices(db: SQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_planned_income_plan_id ON planned_income(plan_id)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_planned_expense_plan_id ON planned_expense(plan_id)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_transactions_date_str ON transactions(date_str)")
     }
 
     private fun migrateToVersion3(db: SQLiteDatabase) {
