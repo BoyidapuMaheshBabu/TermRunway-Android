@@ -110,6 +110,7 @@ If selected when V2 planning begins, Saving Goals may become **V2 Phase 01** or 
 - remaining-amount and time-based guidance
 - compact Home visibility with primary management inside Plan
 - no new top-level navigation mode
+- tracked as [GitHub issue #27](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/issues/27) with the durable [product issue record](issues/002-saving-goals-v2-candidate.md)
 
 ### UX
 
