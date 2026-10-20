@@ -2,7 +2,7 @@
 
 ## Status
 
-**Prepared — refinement pending**
+**Active — refinement in progress**
 
 ## Objective
 
@@ -23,7 +23,7 @@ Polish should improve the product experience without replacing functional correc
 
 ## Current State
 
-The phase was prepared as a refinement unit. Its intended work has not been accepted as complete.
+The development branch [`v1/phase/12-ui-ux-polish`](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/12-ui-ux-polish) has been created from the accepted Phase 11 implementation branch. UI/UX refinement is now active. Existing finance logic, persistence, notifications, backup/restore, and navigation behavior remain protected unless a concrete UI issue requires a narrowly scoped change.
 
 ## Completion
 
