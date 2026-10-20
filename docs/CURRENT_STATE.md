@@ -99,9 +99,9 @@ After V1 completion, do not continue to Phase 16. The next major cycle restarts 
 
 ## Current Priority
 
-**Current active phase: V1 Phase 11 — Settings and App Preferences.**
+**Current active phase: V1 Phase 12 — UI/UX Polish.**
 
-V1 Phases 01–10 have been completed and developer-accepted. The current priority is now Phase 11, focused on settings and app preferences.
+V1 Phases 01–11 have been completed and developer-accepted. Phase 11 was accepted after physical-device testing on 2026-10-20. Phase 12 is active on [`v1/phase/12-ui-ux-polish`](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/12-ui-ux-polish), based on the accepted Phase 11 implementation. The current priority is visual consistency, interaction quality, hierarchy, and screen-level usability—not new feature expansion.
 
 ## README Status
 
