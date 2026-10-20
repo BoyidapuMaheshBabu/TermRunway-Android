@@ -2,7 +2,7 @@
 
 ## Status
 
-**Active — refinement in progress**
+**Completed — developer accepted**
 
 ## Objective
 
