@@ -37,7 +37,7 @@ See [Phase Index](phases/README.md).
 | V1 / 13 — Performance and Reliability | Phase prepared | Hardening pending |
 | V1 / 14 — Testing and Release Readiness | Phase prepared | Validation pending |
 | V1 / 15 — V1 Finalization | Phase prepared | Current work pending |
-| V2 candidate — Saving Goals | Proposed / not prepared | Not started |
+| V2 candidate — [Saving Goals](issues/002-saving-goals-v2-candidate.md) | Proposed / not prepared | Not started |
 
 ### 🔀 Android Development Branches
 
