@@ -21,10 +21,10 @@ Improve visual consistency, interaction quality, hierarchy, and overall usabilit
 
 Polish should improve the product experience without replacing functional correctness with appearance.
 
-## Current State
+## Outcome
 
-The development branch [`v1/phase/12-ui-ux-polish`](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/12-ui-ux-polish) has been created from the accepted Phase 11 implementation branch. UI/UX refinement is now active. Existing finance logic, persistence, notifications, backup/restore, and navigation behavior remain protected unless a concrete UI issue requires a narrowly scoped change.
+The developer reviewed and accepted Phase 12 after testing. The branch `v1/phase/12-ui-ux-polish` is preserved as a historical checkpoint. Later reliability work belongs to Phase 13, and release validation belongs to Phase 14.
 
 ## Completion
 
-**Not completed. Developer acceptance is still required.**
+**Completed — developer accepted.**
