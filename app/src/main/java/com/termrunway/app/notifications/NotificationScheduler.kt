@@ -11,7 +11,7 @@ object NotificationScheduler {
     private const val DAILY_WORK_TAG = "termrunway_daily_reminder"
     private const val WEEKLY_WORK_TAG = "termrunway_weekly_review"
     private const val MONTHLY_WORK_TAG = "termrunway_monthly_review"
-    private const val PLAN_ENDING_WORK_TAG = "termrunway_plan_ending"
+    private const val PLAN_PROGRESS_WORK_TAG = "termrunway_plan_progress"
 
     fun syncReminders(
         context: Context,
@@ -20,7 +20,8 @@ object NotificationScheduler {
         weeklyEnabled: Boolean,
         monthlyEnabled: Boolean,
         planEndingEnabled: Boolean,
-        targetHour: Int = 20
+        targetHour: Int = 20,
+        targetMinute: Int = 0
     ) {
         val workManager = WorkManager.getInstance(context)
 
@@ -28,13 +29,13 @@ object NotificationScheduler {
             workManager.cancelAllWorkByTag(DAILY_WORK_TAG)
             workManager.cancelAllWorkByTag(WEEKLY_WORK_TAG)
             workManager.cancelAllWorkByTag(MONTHLY_WORK_TAG)
-            workManager.cancelAllWorkByTag(PLAN_ENDING_WORK_TAG)
+            workManager.cancelAllWorkByTag(PLAN_PROGRESS_WORK_TAG)
             return
         }
 
         // Daily Reminder
         if (dailyEnabled) {
-            val initialDelay = calculateInitialDelay(targetHour, 0)
+            val initialDelay = calculateInitialDelay(targetHour, targetMinute)
             val dailyWork = PeriodicWorkRequestBuilder<DailyReminderWorker>(24, TimeUnit.HOURS)
                 .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
                 .addTag(DAILY_WORK_TAG)
@@ -51,7 +52,7 @@ object NotificationScheduler {
 
         // Weekly Review (Every 7 days, Sunday evening)
         if (weeklyEnabled) {
-            val initialDelay = calculateWeeklyDelay(targetHour, 0)
+            val initialDelay = calculateWeeklyDelay(targetHour, targetMinute)
             val weeklyWork = PeriodicWorkRequestBuilder<WeeklyReviewWorker>(7, TimeUnit.DAYS)
                 .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
                 .addTag(WEEKLY_WORK_TAG)
@@ -68,7 +69,7 @@ object NotificationScheduler {
 
         // Monthly Review (Every 30 days)
         if (monthlyEnabled) {
-            val initialDelay = calculateMonthlyDelay(targetHour, 0)
+            val initialDelay = calculateMonthlyDelay(targetHour, targetMinute)
             val monthlyWork = PeriodicWorkRequestBuilder<MonthlyReviewWorker>(30, TimeUnit.DAYS)
                 .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
                 .addTag(MONTHLY_WORK_TAG)
@@ -83,19 +84,21 @@ object NotificationScheduler {
             workManager.cancelAllWorkByTag(MONTHLY_WORK_TAG)
         }
 
-        // Plan Ending Alerts
+        // Plan Progress Updates
         if (planEndingEnabled) {
-            val planWork = PeriodicWorkRequestBuilder<PlanEndingWorker>(24, TimeUnit.HOURS)
-                .addTag(PLAN_ENDING_WORK_TAG)
+            val initialDelay = calculateInitialDelay(targetHour, targetMinute)
+            val planWork = PeriodicWorkRequestBuilder<PlanProgressWorker>(24, TimeUnit.HOURS)
+                .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
+                .addTag(PLAN_PROGRESS_WORK_TAG)
                 .build()
 
             workManager.enqueueUniquePeriodicWork(
-                PLAN_ENDING_WORK_TAG,
+                PLAN_PROGRESS_WORK_TAG,
                 ExistingPeriodicWorkPolicy.UPDATE,
                 planWork
             )
         } else {
-            workManager.cancelAllWorkByTag(PLAN_ENDING_WORK_TAG)
+            workManager.cancelAllWorkByTag(PLAN_PROGRESS_WORK_TAG)
         }
     }
 
