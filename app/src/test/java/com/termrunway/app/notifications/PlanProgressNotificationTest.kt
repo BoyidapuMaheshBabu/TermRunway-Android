@@ -4,12 +4,13 @@ import com.termrunway.app.domain.FinancialCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
+import java.time.LocalDate
 
 class PlanProgressNotificationTest {
 
-    private fun getProgressPercent(startMs: Long, endMs: Long, todayMs: Long): Double {
-        val totalDays = FinancialCalculator.daysInclusive(startMs, endMs).coerceAtLeast(1)
-        val elapsedDays = FinancialCalculator.daysInclusive(startMs, todayMs)
+    private fun getProgressPercent(startDate: LocalDate, endDate: LocalDate, today: LocalDate): Double {
+        val totalDays = FinancialCalculator.daysInclusive(startDate, endDate).coerceAtLeast(1)
+        val elapsedDays = FinancialCalculator.daysInclusive(startDate, today)
         return (elapsedDays.toDouble() / totalDays.toDouble() * 100.0)
     }
 
@@ -26,37 +27,55 @@ class PlanProgressNotificationTest {
 
     @Test
     fun milestone50DetectedAtHalfway() {
-        val percent = getProgressPercent(0L, 99 * 86400000L, 50 * 86400000L)
+        val start = LocalDate.of(2026, 1, 1)
+        val end = LocalDate.of(2026, 4, 10)
+        val today = start.plusDays(50)
+        val percent = getProgressPercent(start, end, today)
         assertEquals(50, detectMilestone(percent))
     }
 
     @Test
     fun milestone75DetectedAt75Percent() {
-        val percent = getProgressPercent(0L, 99 * 86400000L, 75 * 86400000L)
+        val start = LocalDate.of(2026, 1, 1)
+        val end = LocalDate.of(2026, 4, 10)
+        val today = start.plusDays(75)
+        val percent = getProgressPercent(start, end, today)
         assertEquals(75, detectMilestone(percent))
     }
 
     @Test
     fun milestone90DetectedAt90Percent() {
-        val percent = getProgressPercent(0L, 99 * 86400000L, 90 * 86400000L)
+        val start = LocalDate.of(2026, 1, 1)
+        val end = LocalDate.of(2026, 4, 10)
+        val today = start.plusDays(90)
+        val percent = getProgressPercent(start, end, today)
         assertEquals(90, detectMilestone(percent))
     }
 
     @Test
     fun milestone95DetectedAt95Percent() {
-        val percent = getProgressPercent(0L, 99 * 86400000L, 95 * 86400000L)
+        val start = LocalDate.of(2026, 1, 1)
+        val end = LocalDate.of(2026, 4, 10)
+        val today = start.plusDays(95)
+        val percent = getProgressPercent(start, end, today)
         assertEquals(95, detectMilestone(percent))
     }
 
     @Test
     fun milestone100DetectedAtCompletion() {
-        val percent = getProgressPercent(0L, 99 * 86400000L, 100 * 86400000L)
+        val start = LocalDate.of(2026, 1, 1)
+        val end = LocalDate.of(2026, 4, 10)
+        val today = start.plusDays(100)
+        val percent = getProgressPercent(start, end, today)
         assertEquals(100, detectMilestone(percent))
     }
 
     @Test
     fun noMilestoneDetectedBefore50Percent() {
-        val percent = getProgressPercent(0L, 99 * 86400000L, 30 * 86400000L)
+        val start = LocalDate.of(2026, 1, 1)
+        val end = LocalDate.of(2026, 4, 10)
+        val today = start.plusDays(30)
+        val percent = getProgressPercent(start, end, today)
         assertNull(detectMilestone(percent))
     }
 }

@@ -1,5 +1,7 @@
 package com.termrunway.app.data
 
+import java.time.LocalDate
+
 enum class TransactionType { INCOME, EXPENSE }
 
 data class Transaction(
@@ -8,15 +10,15 @@ data class Transaction(
     val amountPaise: Long,
     val category: String,
     val description: String,
-    val dateMs: Long,
+    val date: LocalDate,
     val createdAtMs: Long = System.currentTimeMillis()
 )
 
 data class FinancialPlan(
     val id: Long = 0L,
     val name: String,
-    val startMs: Long,
-    val endMs: Long,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
     val startingMoneyPaise: Long = 0L,
     val createdAtMs: Long = System.currentTimeMillis()
 )
@@ -26,7 +28,7 @@ data class PlannedIncome(
     val planId: Long,
     val source: String,
     val amountPaise: Long,
-    val expectedDateMs: Long? = null
+    val expectedDate: LocalDate? = null
 )
 
 data class PlannedExpense(
@@ -34,7 +36,7 @@ data class PlannedExpense(
     val planId: Long,
     val category: String,
     val amountPaise: Long,
-    val expectedDateMs: Long? = null,
+    val expectedDate: LocalDate? = null,
     val frequency: String = "once"
 )
 
@@ -52,6 +54,14 @@ data class BackupSnapshot(
     val schemaVersion: Int,
     val name: String,
     val themeMode: String,
+    val trackingMode: String = "daily",
+    val notificationsEnabled: Boolean = true,
+    val dailyReminderEnabled: Boolean = true,
+    val weeklyReviewEnabled: Boolean = true,
+    val monthlyReviewEnabled: Boolean = true,
+    val planEndingEnabled: Boolean = true,
+    val reminderHour: Int = 20,
+    val reminderMinute: Int = 0,
     val transactions: List<Transaction>,
     val plans: List<FinancialPlan>,
     val plannedIncomes: List<PlannedIncome>,

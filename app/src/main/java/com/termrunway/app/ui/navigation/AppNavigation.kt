@@ -167,8 +167,8 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
         WelcomeScreen(
             onSave = viewModel::completeOnboarding,
             onRestoreBackup = { uri, onDone ->
-                viewModel.restoreBackup(context.contentResolver, uri) {
-                    onDone(true)
+                viewModel.restoreBackup(context.contentResolver, uri) { success, err ->
+                    onDone(success, err)
                 }
             },
             hasLocalData = state.transactions.isNotEmpty() || state.plans.isNotEmpty()
@@ -193,7 +193,7 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
             onDeleteCategory = viewModel::deleteCategory,
             onClearData = { viewModel.clearAll { settingsOpen = false } },
             onExport = { uri -> viewModel.exportBackup(context.contentResolver, uri) {} },
-            onRestore = { uri -> viewModel.restoreBackup(context.contentResolver, uri) {} },
+            onRestore = { uri, onResult -> viewModel.restoreBackup(context.contentResolver, uri, onResult) },
             onNotificationsToggle = viewModel::setNotificationsEnabled,
             onDailyReminderToggle = viewModel::setDailyReminderEnabled,
             onWeeklyReviewToggle = viewModel::setWeeklyReviewEnabled,
@@ -256,8 +256,8 @@ fun AppNavigation(viewModel: TermRunwayViewModel) {
                 viewModel.savePlan(
                     existingId = state.activePlan?.id,
                     name = plan.name,
-                    startMs = plan.startMs,
-                    endMs = plan.endMs,
+                    startDate = plan.startDate,
+                    endDate = plan.endDate,
                     startingMoneyPaise = plan.startingMoneyPaise,
                     incomes = income,
                     expenses = expense

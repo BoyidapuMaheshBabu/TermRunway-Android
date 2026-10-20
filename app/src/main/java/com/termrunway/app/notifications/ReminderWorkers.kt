@@ -5,7 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.termrunway.app.data.TermRunwayRepository
 import com.termrunway.app.domain.FinancialCalculator
-import java.util.Calendar
+import java.time.LocalDate
 
 class DailyReminderWorker(
     appContext: Context,
@@ -14,9 +14,9 @@ class DailyReminderWorker(
 
     override suspend fun doWork(): Result {
         val repository = TermRunwayRepository(applicationContext)
-        val todayMs = System.currentTimeMillis()
+        val today = LocalDate.now()
         val todayTransactions = repository.listTransactions().filter {
-            FinancialCalculator.sameDay(it.dateMs, todayMs)
+            FinancialCalculator.sameDay(it.date, today)
         }
 
         if (todayTransactions.isEmpty()) {
@@ -59,6 +59,7 @@ class MonthlyReviewWorker(
             title = "Monthly Money Review",
             message = "Your monthly cash flow summary is ready in TermRunway."
         )
+        NotificationScheduler.syncFromPreferences(applicationContext)
         return Result.success()
     }
 }
@@ -71,11 +72,11 @@ class PlanProgressWorker(
     override suspend fun doWork(): Result {
         val repository = TermRunwayRepository(applicationContext)
         val plans = repository.listPlans()
-        val todayStartMs = startOfToday()
+        val today = LocalDate.now()
 
-        val active = plans.firstOrNull { it.endMs >= todayStartMs && it.startMs <= todayStartMs } ?: return Result.success()
-        val totalDays = FinancialCalculator.daysInclusive(active.startMs, active.endMs).coerceAtLeast(1)
-        val elapsedDays = FinancialCalculator.daysInclusive(active.startMs, todayStartMs)
+        val active = plans.firstOrNull { !it.endDate.isBefore(today) && !it.startDate.isAfter(today) } ?: return Result.success()
+        val totalDays = FinancialCalculator.daysInclusive(active.startDate, active.endDate).coerceAtLeast(1)
+        val elapsedDays = FinancialCalculator.daysInclusive(active.startDate, today)
         val progressPercent = (elapsedDays.toDouble() / totalDays.toDouble() * 100.0)
 
         val prefs = applicationContext.getSharedPreferences("termrunway_milestones", Context.MODE_PRIVATE)
@@ -118,11 +119,4 @@ class PlanProgressWorker(
 
         return Result.success()
     }
-
-    private fun startOfToday(): Long = Calendar.getInstance().apply {
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
 }

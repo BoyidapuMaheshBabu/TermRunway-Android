@@ -9,26 +9,23 @@ import com.termrunway.app.ui.util.PeriodPreset
 import com.termrunway.app.ui.util.parseMoneyOrNull
 import com.termrunway.app.ui.util.resolvePeriodRange
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.Calendar
+import java.time.LocalDate
 
 class FinancialCalculatorTest {
-    private fun day(offset: Int): Long = Calendar.getInstance().apply {
-        add(Calendar.DAY_OF_YEAR, offset)
-        set(Calendar.HOUR_OF_DAY, 12)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
+    private val baseDate: LocalDate = LocalDate.of(2026, 10, 18)
+
+    private fun day(offset: Int): LocalDate = baseDate.plusDays(offset.toLong())
 
     @Test
     fun balanceUsesIncomeMinusExpense() {
         val transactions = listOf(
-            Transaction(type = TransactionType.INCOME, amountPaise = 100_000, category = "Parents", description = "", dateMs = day(0)),
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 35_000, category = "Food", description = "", dateMs = day(0)),
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 15_000, category = "Transport", description = "", dateMs = day(-1))
+            Transaction(type = TransactionType.INCOME, amountPaise = 100_000, category = "Parents", description = "", date = day(0)),
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 35_000, category = "Food", description = "", date = day(0)),
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 15_000, category = "Transport", description = "", date = day(-1))
         )
 
         assertEquals(50_000L, FinancialCalculator.balance(transactions))
@@ -41,20 +38,20 @@ class FinancialCalculatorTest {
         val end = day(9)
         val plan = FinancialPlan(
             name = "Test Semester",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 100_000
         )
         val incomes = listOf(
-            PlannedIncome(planId = 1, source = "Parents", amountPaise = 50_000, expectedDateMs = start)
+            PlannedIncome(planId = 1, source = "Parents", amountPaise = 50_000, expectedDate = start)
         )
         val expenses = listOf(
-            PlannedExpense(planId = 1, category = "Food", amountPaise = 60_000, expectedDateMs = start),
-            PlannedExpense(planId = 1, category = "Transport", amountPaise = 20_000, expectedDateMs = start)
+            PlannedExpense(planId = 1, category = "Food", amountPaise = 60_000, expectedDate = start),
+            PlannedExpense(planId = 1, category = "Transport", amountPaise = 20_000, expectedDate = start)
         )
         val transactions = listOf(
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 20_000, category = "Food", description = "", dateMs = day(2)),
-            Transaction(type = TransactionType.INCOME, amountPaise = 25_000, category = "Parents", description = "", dateMs = day(3))
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 20_000, category = "Food", description = "", date = day(2)),
+            Transaction(type = TransactionType.INCOME, amountPaise = 25_000, category = "Parents", description = "", date = day(3))
         )
 
         val metrics = FinancialCalculator.planMetrics(
@@ -62,7 +59,7 @@ class FinancialCalculatorTest {
             plannedIncome = incomes,
             plannedExpenses = expenses,
             transactions = transactions,
-            todayMs = day(4)
+            today = day(4)
         )
 
         assertEquals(50_000L, metrics.totalExpectedIncomePaise)
@@ -78,12 +75,12 @@ class FinancialCalculatorTest {
         val end = day(9)
         val plan = FinancialPlan(
             name = "Income Plan",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 200_000 // ₹2,000
         )
         val incomes = listOf(
-            PlannedIncome(planId = 1, source = "Future Allowance", amountPaise = 1000_000, expectedDateMs = day(7)) // ₹10,000 on day 7
+            PlannedIncome(planId = 1, source = "Future Allowance", amountPaise = 1000_000, expectedDate = day(7)) // ₹10,000 on day 7
         )
 
         val metricsDay2 = FinancialCalculator.planMetrics(
@@ -91,7 +88,7 @@ class FinancialCalculatorTest {
             plannedIncome = incomes,
             plannedExpenses = emptyList(),
             transactions = emptyList(),
-            todayMs = day(2)
+            today = day(2)
         )
 
         // Day 2: Expected income to date is 0L
@@ -105,7 +102,7 @@ class FinancialCalculatorTest {
             plannedIncome = incomes,
             plannedExpenses = emptyList(),
             transactions = emptyList(),
-            todayMs = day(7)
+            today = day(7)
         )
 
         // Day 7: Expected income to date is 1,000,000
@@ -118,15 +115,15 @@ class FinancialCalculatorTest {
         val end = day(9) // 10 days
         val plan = FinancialPlan(
             name = "College Term Plan",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 1000_000 // ₹10,000 starting money
         )
         val expenses = listOf(
-            PlannedExpense(planId = 1, category = "College Fee", amountPaise = 500_000, expectedDateMs = day(8)) // ₹5,000 fee due on day 8
+            PlannedExpense(planId = 1, category = "College Fee", amountPaise = 500_000, expectedDate = day(8)) // ₹5,000 fee due on day 8
         )
         val transactions = listOf(
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 500_000, category = "Food", description = "", dateMs = day(1)) // ₹5,000 actual food expense on day 1
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 500_000, category = "Food", description = "", date = day(1)) // ₹5,000 actual food expense on day 1
         )
 
         val metricsDay2 = FinancialCalculator.planMetrics(
@@ -134,7 +131,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = expenses,
             transactions = transactions,
-            todayMs = day(2)
+            today = day(2)
         )
 
         // On day 2, actual remaining is ₹5,000. Future college fee is ₹5,000.
@@ -151,13 +148,13 @@ class FinancialCalculatorTest {
         val end = day(9)
         val plan = FinancialPlan(
             name = "Active Term",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 100_000
         )
         val transactions = listOf(
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 10_000, category = "Food", description = "", dateMs = day(1)),
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 50_000, category = "Future Fee", description = "", dateMs = day(8)) // future dated
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 10_000, category = "Food", description = "", date = day(1)),
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 50_000, category = "Future Fee", description = "", date = day(8)) // future dated
         )
 
         val metrics = FinancialCalculator.planMetrics(
@@ -165,7 +162,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = emptyList(),
             transactions = transactions,
-            todayMs = day(2) // Today is day 2
+            today = day(2) // Today is day 2
         )
 
         // Only day 1 expense (10,000) counts towards actual expense so far
@@ -179,12 +176,12 @@ class FinancialCalculatorTest {
         val end = day(9)
         val plan = FinancialPlan(
             name = "College Plan",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 1_000_000 // ₹10,000
         )
         val expenses = listOf(
-            PlannedExpense(planId = 1, category = "College Fee", amountPaise = 500_000, expectedDateMs = day(8)) // Fee due on day 8
+            PlannedExpense(planId = 1, category = "College Fee", amountPaise = 500_000, expectedDate = day(8)) // Fee due on day 8
         )
 
         val metricsDay2 = FinancialCalculator.planMetrics(
@@ -192,7 +189,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = expenses,
             transactions = emptyList(),
-            todayMs = day(2)
+            today = day(2)
         )
 
         // On Day 2 (before Day 8), expected spend so far excludes the fee
@@ -203,7 +200,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = expenses,
             transactions = emptyList(),
-            todayMs = day(8)
+            today = day(8)
         )
 
         // On Day 8, expected spend so far includes the fee
@@ -216,12 +213,12 @@ class FinancialCalculatorTest {
         val end = day(9) // 10 days
         val plan = FinancialPlan(
             name = "Fee Plan",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 1_000_000 // ₹10,000
         )
         val expenses = listOf(
-            PlannedExpense(planId = 1, category = "Fee", amountPaise = 500_000, expectedDateMs = day(8)) // ₹5,000 fee
+            PlannedExpense(planId = 1, category = "Fee", amountPaise = 500_000, expectedDate = day(8)) // ₹5,000 fee
         )
 
         val metrics = FinancialCalculator.planMetrics(
@@ -229,7 +226,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = expenses,
             transactions = emptyList(),
-            todayMs = day(0)
+            today = day(0)
         )
 
         // Actual remaining = ₹10,000. Future commitment = ₹5,000. Discretionary = ₹5,000.
@@ -242,8 +239,8 @@ class FinancialCalculatorTest {
         val today = day(0)
         val plan = FinancialPlan(
             name = "One Day Plan",
-            startMs = today,
-            endMs = today,
+            startDate = today,
+            endDate = today,
             startingMoneyPaise = 10_000
         )
 
@@ -252,7 +249,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = emptyList(),
             transactions = emptyList(),
-            todayMs = today
+            today = today
         )
 
         assertEquals(1, metrics.daysTotal)
@@ -274,12 +271,12 @@ class FinancialCalculatorTest {
         val range = resolvePeriodRange(
             preset = PeriodPreset.CUSTOM,
             activePlan = null,
-            customStartMs = day(10), // reversed
-            customEndMs = day(2),
-            todayMs = day(5)
+            customStart = day(10), // reversed
+            customEnd = day(2),
+            today = day(5)
         )
 
-        assertTrue(range.startMs!! <= range.endMs!!)
+        assertFalse(range.start!!.isAfter(range.end!!))
     }
 
     @Test
@@ -288,12 +285,12 @@ class FinancialCalculatorTest {
         val end = day(5)
         val plan = FinancialPlan(
             name = "Tight Month",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 10_000 // ₹100
         )
         val transactions = listOf(
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 30_000, category = "Food", description = "", dateMs = day(0)) // ₹300
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 30_000, category = "Food", description = "", date = day(0)) // ₹300
         )
 
         val metrics = FinancialCalculator.planMetrics(
@@ -301,7 +298,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = emptyList(),
             transactions = transactions,
-            todayMs = day(0)
+            today = day(0)
         )
 
         assertEquals("Overdrawn", metrics.status)
@@ -316,8 +313,8 @@ class FinancialCalculatorTest {
         val end = day(15)
         val plan = FinancialPlan(
             name = "Next Semester",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 500_000
         )
 
@@ -326,7 +323,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = emptyList(),
             transactions = emptyList(),
-            todayMs = day(0)
+            today = day(0)
         )
 
         assertEquals("Upcoming", metrics.status)
@@ -339,8 +336,8 @@ class FinancialCalculatorTest {
         val end = day(-5)
         val plan = FinancialPlan(
             name = "Past Term",
-            startMs = start,
-            endMs = end,
+            startDate = start,
+            endDate = end,
             startingMoneyPaise = 200_000
         )
 
@@ -349,7 +346,7 @@ class FinancialCalculatorTest {
             plannedIncome = emptyList(),
             plannedExpenses = emptyList(),
             transactions = emptyList(),
-            todayMs = day(0)
+            today = day(0)
         )
 
         assertEquals("Completed", metrics.status)
@@ -361,9 +358,9 @@ class FinancialCalculatorTest {
     @Test
     fun categoryTotalsAreSortedByHighestSpend() {
         val transactions = listOf(
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 10_000, category = "Food", description = "", dateMs = day(0)),
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 25_000, category = "Transport", description = "", dateMs = day(0)),
-            Transaction(type = TransactionType.EXPENSE, amountPaise = 20_000, category = "Food", description = "", dateMs = day(-1))
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 10_000, category = "Food", description = "", date = day(0)),
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 25_000, category = "Transport", description = "", date = day(0)),
+            Transaction(type = TransactionType.EXPENSE, amountPaise = 20_000, category = "Food", description = "", date = day(-1))
         )
 
         val totals = FinancialCalculator.categoryTotals(transactions, TransactionType.EXPENSE)
@@ -371,5 +368,27 @@ class FinancialCalculatorTest {
         assertEquals(listOf("Food", "Transport"), totals.keys.toList())
         assertEquals(30_000L, totals["Food"])
         assertEquals(25_000L, totals["Transport"])
+    }
+
+    @Test
+    fun leapYearDaysInclusiveCalculation() {
+        val leapStart = LocalDate.of(2028, 2, 1)
+        val leapEnd = LocalDate.of(2028, 2, 29)
+        assertEquals(29, FinancialCalculator.daysInclusive(leapStart, leapEnd))
+
+        val fullLeapYearStart = LocalDate.of(2028, 1, 1)
+        val fullLeapYearEnd = LocalDate.of(2028, 12, 31)
+        assertEquals(366, FinancialCalculator.daysInclusive(fullLeapYearStart, fullLeapYearEnd))
+
+        val nonLeapYearStart = LocalDate.of(2027, 1, 1)
+        val nonLeapYearEnd = LocalDate.of(2027, 12, 31)
+        assertEquals(365, FinancialCalculator.daysInclusive(nonLeapYearStart, nonLeapYearEnd))
+    }
+
+    @Test
+    fun monthBoundaryInclusiveDaysCalculation() {
+        val start = LocalDate.of(2026, 1, 31)
+        val end = LocalDate.of(2026, 2, 1)
+        assertEquals(2, FinancialCalculator.daysInclusive(start, end))
     }
 }

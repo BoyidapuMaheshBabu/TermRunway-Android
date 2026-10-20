@@ -2,7 +2,6 @@ package com.termrunway.app.ui.screens.activity
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,20 +11,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.termrunway.app.data.Transaction
 import com.termrunway.app.data.TransactionType
@@ -40,11 +36,10 @@ import com.termrunway.app.ui.components.TransactionRow
 import com.termrunway.app.ui.components.dateLabel
 import com.termrunway.app.ui.theme.RunwayMint
 import com.termrunway.app.ui.theme.RunwayRed
-import com.termrunway.app.ui.util.DatePeriodRange
 import com.termrunway.app.ui.util.PeriodPreset
-import com.termrunway.app.ui.util.addDays
 import com.termrunway.app.ui.util.pickDate
 import com.termrunway.app.ui.util.resolvePeriodRange
+import java.time.LocalDate
 
 @Composable
 fun ActivityScreen(
@@ -56,8 +51,8 @@ fun ActivityScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var mode by rememberSaveable { mutableStateOf(0) } // 0: All, 1: Income, 2: Expense
     var selectedPreset by rememberSaveable { mutableStateOf(PeriodPreset.ALL_TIME) }
-    var customStartMs by rememberSaveable { mutableLongStateOf(addDays(System.currentTimeMillis(), -30)) }
-    var customEndMs by rememberSaveable { mutableLongStateOf(System.currentTimeMillis()) }
+    var customStart by rememberSaveable { mutableStateOf(LocalDate.now().minusDays(30)) }
+    var customEnd by rememberSaveable { mutableStateOf(LocalDate.now()) }
 
     val periodChoices = remember(state.activePlan) {
         buildList {
@@ -72,8 +67,8 @@ fun ActivityScreen(
         }
     }
 
-    val resolvedRange = remember(selectedPreset, state.activePlan, customStartMs, customEndMs) {
-        resolvePeriodRange(selectedPreset, state.activePlan, customStartMs, customEndMs)
+    val resolvedRange = remember(selectedPreset, state.activePlan, customStart, customEnd) {
+        resolvePeriodRange(selectedPreset, state.activePlan, customStart, customEnd)
     }
 
     val filtered = remember(state.transactions, query, mode, resolvedRange) {
@@ -86,10 +81,10 @@ fun ActivityScreen(
             val queryMatch = query.isBlank() ||
                 tx.category.contains(query, true) ||
                 tx.description.contains(query, true)
-            val rangeMatch = if (resolvedRange.startMs == null || resolvedRange.endMs == null) {
+            val rangeMatch = if (resolvedRange.start == null || resolvedRange.end == null) {
                 true
             } else {
-                tx.dateMs in resolvedRange.startMs..resolvedRange.endMs
+                !tx.date.isBefore(resolvedRange.start) && !tx.date.isAfter(resolvedRange.end)
             }
             modeMatch && queryMatch && rangeMatch
         }
@@ -145,13 +140,13 @@ fun ActivityScreen(
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
-                        onClick = { pickDate(context, customStartMs) { customStartMs = it } },
+                        onClick = { pickDate(context, customStart) { customStart = it } },
                         modifier = Modifier.weight(1f)
-                    ) { Text("From: " + dateLabel(customStartMs), maxLines = 1) }
+                    ) { Text("From: " + dateLabel(customStart), maxLines = 1) }
                     OutlinedButton(
-                        onClick = { pickDate(context, customEndMs) { customEndMs = it } },
+                        onClick = { pickDate(context, customEnd) { customEnd = it } },
                         modifier = Modifier.weight(1f)
-                    ) { Text("To: " + dateLabel(customEndMs), maxLines = 1) }
+                    ) { Text("To: " + dateLabel(customEnd), maxLines = 1) }
                 }
             }
         }

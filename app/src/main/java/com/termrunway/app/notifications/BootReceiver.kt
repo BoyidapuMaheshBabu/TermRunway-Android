@@ -3,20 +3,26 @@ package com.termrunway.app.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
+        val action = intent.action
+        if (action == Intent.ACTION_BOOT_COMPLETED ||
+            action == Intent.ACTION_MY_PACKAGE_REPLACED ||
+            action == Intent.ACTION_TIMEZONE_CHANGED ||
+            action == Intent.ACTION_TIME_CHANGED) {
             NotificationHelper.createNotificationChannel(context)
-            // Default sync on boot (VM / app startup also syncs based on preferences)
-            NotificationScheduler.syncReminders(
-                context = context,
-                masterEnabled = true,
-                dailyEnabled = true,
-                weeklyEnabled = true,
-                monthlyEnabled = true,
-                planEndingEnabled = true
-            )
+            val pendingResult = goAsync()
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    NotificationScheduler.syncFromPreferences(context)
+                } finally {
+                    pendingResult.finish()
+                }
+            }
         }
     }
 }

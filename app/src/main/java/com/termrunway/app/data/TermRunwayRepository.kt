@@ -5,13 +5,14 @@ import android.content.Context
 import android.database.Cursor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 
 class TermRunwayRepository(context: Context) {
     private val database = TermRunwayDatabase(context.applicationContext)
 
     suspend fun listTransactions(): List<Transaction> = withContext(Dispatchers.IO) {
         database.readableDatabase.rawQuery(
-            "SELECT * FROM transactions ORDER BY date_ms DESC, id DESC", null
+            "SELECT * FROM transactions ORDER BY date_str DESC, id DESC", null
         ).use { cursor ->
             buildList {
                 while (cursor.moveToNext()) add(cursor.toTransaction())
@@ -33,7 +34,7 @@ class TermRunwayRepository(context: Context) {
 
     suspend fun listPlans(): List<FinancialPlan> = withContext(Dispatchers.IO) {
         database.readableDatabase.rawQuery(
-            "SELECT * FROM plans ORDER BY start_ms DESC, id DESC", null
+            "SELECT * FROM plans ORDER BY start_date_str DESC, id DESC", null
         ).use { cursor ->
             buildList {
                 while (cursor.moveToNext()) add(cursor.toPlan())
@@ -101,7 +102,7 @@ class TermRunwayRepository(context: Context) {
 
     suspend fun planIncome(planId: Long): List<PlannedIncome> = withContext(Dispatchers.IO) {
         database.readableDatabase.rawQuery(
-            "SELECT * FROM planned_income WHERE plan_id=? ORDER BY COALESCE(expected_date_ms, 0), id",
+            "SELECT * FROM planned_income WHERE plan_id=? ORDER BY COALESCE(expected_date_str, ''), id",
             arrayOf(planId.toString())
         ).use { cursor ->
             buildList {
@@ -112,7 +113,7 @@ class TermRunwayRepository(context: Context) {
 
     suspend fun planExpenses(planId: Long): List<PlannedExpense> = withContext(Dispatchers.IO) {
         database.readableDatabase.rawQuery(
-            "SELECT * FROM planned_expense WHERE plan_id=? ORDER BY COALESCE(expected_date_ms, 0), id",
+            "SELECT * FROM planned_expense WHERE plan_id=? ORDER BY COALESCE(expected_date_str, ''), id",
             arrayOf(planId.toString())
         ).use { cursor ->
             buildList {
@@ -157,12 +158,31 @@ class TermRunwayRepository(context: Context) {
         )
     }
 
-    suspend fun snapshot(name: String, themeMode: String): BackupSnapshot = withContext(Dispatchers.IO) {
+    suspend fun snapshot(
+        name: String,
+        themeMode: String,
+        trackingMode: String = "daily",
+        notificationsEnabled: Boolean = true,
+        dailyReminderEnabled: Boolean = true,
+        weeklyReviewEnabled: Boolean = true,
+        monthlyReviewEnabled: Boolean = true,
+        planEndingEnabled: Boolean = true,
+        reminderHour: Int = 20,
+        reminderMinute: Int = 0
+    ): BackupSnapshot = withContext(Dispatchers.IO) {
         val plans = listPlans()
         BackupSnapshot(
-            schemaVersion = 1,
+            schemaVersion = 2,
             name = name,
             themeMode = themeMode,
+            trackingMode = trackingMode,
+            notificationsEnabled = notificationsEnabled,
+            dailyReminderEnabled = dailyReminderEnabled,
+            weeklyReviewEnabled = weeklyReviewEnabled,
+            monthlyReviewEnabled = monthlyReviewEnabled,
+            planEndingEnabled = planEndingEnabled,
+            reminderHour = reminderHour,
+            reminderMinute = reminderMinute,
             transactions = listTransactions(),
             plans = plans,
             plannedIncomes = plans.flatMap { planIncome(it.id) },
@@ -172,7 +192,7 @@ class TermRunwayRepository(context: Context) {
     }
 
     suspend fun restore(snapshot: BackupSnapshot) = withContext(Dispatchers.IO) {
-        require(snapshot.schemaVersion == 1) { "Unsupported backup version" }
+        require(snapshot.schemaVersion == 1 || snapshot.schemaVersion == 2) { "Unsupported backup version" }
         require(snapshot.name.length <= 40) { "Invalid user name" }
         val db = database.writableDatabase
         db.beginTransaction()
@@ -252,8 +272,8 @@ class TermRunwayRepository(context: Context) {
 
     private fun planValues(plan: FinancialPlan) = ContentValues().apply {
         put("name", plan.name)
-        put("start_ms", plan.startMs)
-        put("end_ms", plan.endMs)
+        put("start_date_str", plan.startDate.toString())
+        put("end_date_str", plan.endDate.toString())
         put("starting_money_paise", plan.startingMoneyPaise)
         put("created_at_ms", plan.createdAtMs)
     }
@@ -262,14 +282,14 @@ class TermRunwayRepository(context: Context) {
         put("plan_id", item.planId)
         put("source", item.source)
         put("amount_paise", item.amountPaise)
-        if (item.expectedDateMs == null) putNull("expected_date_ms") else put("expected_date_ms", item.expectedDateMs)
+        if (item.expectedDate == null) putNull("expected_date_str") else put("expected_date_str", item.expectedDate.toString())
     }
 
     private fun expenseValues(item: PlannedExpense) = ContentValues().apply {
         put("plan_id", item.planId)
         put("category", item.category)
         put("amount_paise", item.amountPaise)
-        if (item.expectedDateMs == null) putNull("expected_date_ms") else put("expected_date_ms", item.expectedDateMs)
+        if (item.expectedDate == null) putNull("expected_date_str") else put("expected_date_str", item.expectedDate.toString())
         put("frequency", item.frequency)
     }
 
@@ -279,15 +299,15 @@ class TermRunwayRepository(context: Context) {
         amountPaise = getLong(getColumnIndexOrThrow("amount_paise")),
         category = getString(getColumnIndexOrThrow("category")),
         description = getString(getColumnIndexOrThrow("description")),
-        dateMs = getLong(getColumnIndexOrThrow("date_ms")),
+        date = LocalDate.parse(getString(getColumnIndexOrThrow("date_str"))),
         createdAtMs = getLong(getColumnIndexOrThrow("created_at_ms"))
     )
 
     private fun Cursor.toPlan() = FinancialPlan(
         id = getLong(getColumnIndexOrThrow("id")),
         name = getString(getColumnIndexOrThrow("name")),
-        startMs = getLong(getColumnIndexOrThrow("start_ms")),
-        endMs = getLong(getColumnIndexOrThrow("end_ms")),
+        startDate = LocalDate.parse(getString(getColumnIndexOrThrow("start_date_str"))),
+        endDate = LocalDate.parse(getString(getColumnIndexOrThrow("end_date_str"))),
         startingMoneyPaise = getLong(getColumnIndexOrThrow("starting_money_paise")),
         createdAtMs = getLong(getColumnIndexOrThrow("created_at_ms"))
     )
@@ -297,7 +317,7 @@ class TermRunwayRepository(context: Context) {
         planId = getLong(getColumnIndexOrThrow("plan_id")),
         source = getString(getColumnIndexOrThrow("source")),
         amountPaise = getLong(getColumnIndexOrThrow("amount_paise")),
-        expectedDateMs = if (isNull(getColumnIndexOrThrow("expected_date_ms"))) null else getLong(getColumnIndexOrThrow("expected_date_ms"))
+        expectedDate = if (isNull(getColumnIndexOrThrow("expected_date_str"))) null else LocalDate.parse(getString(getColumnIndexOrThrow("expected_date_str")))
     )
 
     private fun Cursor.toPlannedExpense() = PlannedExpense(
@@ -305,7 +325,7 @@ class TermRunwayRepository(context: Context) {
         planId = getLong(getColumnIndexOrThrow("plan_id")),
         category = getString(getColumnIndexOrThrow("category")),
         amountPaise = getLong(getColumnIndexOrThrow("amount_paise")),
-        expectedDateMs = if (isNull(getColumnIndexOrThrow("expected_date_ms"))) null else getLong(getColumnIndexOrThrow("expected_date_ms")),
+        expectedDate = if (isNull(getColumnIndexOrThrow("expected_date_str"))) null else LocalDate.parse(getString(getColumnIndexOrThrow("expected_date_str"))),
         frequency = getString(getColumnIndexOrThrow("frequency"))
     )
 

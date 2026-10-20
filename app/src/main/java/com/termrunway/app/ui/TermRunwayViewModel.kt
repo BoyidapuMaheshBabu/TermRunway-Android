@@ -1,11 +1,7 @@
 package com.termrunway.app.ui
 
 import android.app.Application
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.termrunway.app.data.BackupManager
@@ -14,9 +10,21 @@ import com.termrunway.app.data.CategoryType
 import com.termrunway.app.data.FinancialPlan
 import com.termrunway.app.data.PlannedExpense
 import com.termrunway.app.data.PlannedIncome
+import com.termrunway.app.data.PreferencesKeys.DAILY_REMINDER_KEY
+import com.termrunway.app.data.PreferencesKeys.MONTHLY_REVIEW_KEY
+import com.termrunway.app.data.PreferencesKeys.NAME_KEY
+import com.termrunway.app.data.PreferencesKeys.NOTIFICATIONS_ENABLED_KEY
+import com.termrunway.app.data.PreferencesKeys.ONBOARDING_KEY
+import com.termrunway.app.data.PreferencesKeys.PLAN_ENDING_KEY
+import com.termrunway.app.data.PreferencesKeys.REMINDER_HOUR_KEY
+import com.termrunway.app.data.PreferencesKeys.REMINDER_MINUTE_KEY
+import com.termrunway.app.data.PreferencesKeys.THEME_KEY
+import com.termrunway.app.data.PreferencesKeys.TRACKING_MODE_KEY
+import com.termrunway.app.data.PreferencesKeys.WEEKLY_REVIEW_KEY
 import com.termrunway.app.data.TermRunwayRepository
 import com.termrunway.app.data.Transaction
 import com.termrunway.app.data.TransactionType
+import com.termrunway.app.data.termRunwayDataStore
 import com.termrunway.app.domain.FinancialCalculator
 import com.termrunway.app.notifications.NotificationScheduler
 import com.termrunway.app.ui.mode.TrackingMode
@@ -26,8 +34,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-private val android.content.Context.termRunwayDataStore by preferencesDataStore(name = "termrunway_settings")
+import java.time.LocalDate
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
@@ -74,8 +81,8 @@ data class AppUiState(
     val balancePaise get() = FinancialCalculator.balance(transactions)
     val totalIncomePaise get() = FinancialCalculator.totalByType(transactions, TransactionType.INCOME)
     val totalExpensePaise get() = FinancialCalculator.totalByType(transactions, TransactionType.EXPENSE)
-    val todayIncomePaise get() = FinancialCalculator.dayIncome(transactions, System.currentTimeMillis())
-    val todayExpensePaise get() = FinancialCalculator.dayExpense(transactions, System.currentTimeMillis())
+    val todayIncomePaise get() = FinancialCalculator.dayIncome(transactions, LocalDate.now())
+    val todayExpensePaise get() = FinancialCalculator.dayExpense(transactions, LocalDate.now())
 }
 
 class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
@@ -279,7 +286,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(message = "Choose a category.") }
             return
         }
-        if (transaction.dateMs > startOfToday() + 86_400_000L - 1L) {
+        if (transaction.date.isAfter(LocalDate.now())) {
             _state.update {
                 it.copy(message = "Actual transactions can only be today or an earlier date. Use Plan mode for future money.")
             }
@@ -304,7 +311,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(message = "Enter an amount greater than ₹0.") }
             return
         }
-        if (transaction.dateMs > startOfToday() + 86_400_000L - 1L) {
+        if (transaction.date.isAfter(LocalDate.now())) {
             _state.update {
                 it.copy(message = "Actual transactions can only be today or an earlier date. Use Plan mode for future money.")
             }
@@ -342,8 +349,8 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     fun savePlan(
         existingId: Long?,
         name: String,
-        startMs: Long,
-        endMs: Long,
+        startDate: LocalDate,
+        endDate: LocalDate,
         startingMoneyPaise: Long,
         incomes: List<PlannedIncome>,
         expenses: List<PlannedExpense>,
@@ -355,7 +362,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                 _state.update { it.copy(message = "Give your plan a name.") }
                 return
             }
-            endMs < startMs -> {
+            endDate.isBefore(startDate) -> {
                 _state.update { it.copy(message = "End date must be on or after the start date.") }
                 return
             }
@@ -371,8 +378,8 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                 val plan = FinancialPlan(
                     id = existingId ?: 0L,
                     name = cleanName.take(60),
-                    startMs = startMs,
-                    endMs = endMs,
+                    startDate = startDate,
+                    endDate = endDate,
                     startingMoneyPaise = startingMoneyPaise
                 )
                 if (existingId == null) {
@@ -422,16 +429,28 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     fun exportBackup(
         resolver: android.content.ContentResolver,
         uri: android.net.Uri,
-        onDone: () -> Unit
+        onDone: (() -> Unit)? = null
     ) {
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
             runCatching {
-                val snapshot = repository.snapshot(_state.value.name, _state.value.themeMode.name.lowercase())
+                val current = _state.value
+                val snapshot = repository.snapshot(
+                    name = current.name,
+                    themeMode = current.themeMode.name.lowercase(),
+                    trackingMode = current.trackingMode.storageValue,
+                    notificationsEnabled = current.notificationsEnabled,
+                    dailyReminderEnabled = current.dailyReminderEnabled,
+                    weeklyReviewEnabled = current.weeklyReviewEnabled,
+                    monthlyReviewEnabled = current.monthlyReviewEnabled,
+                    planEndingEnabled = current.planEndingEnabled,
+                    reminderHour = current.reminderHour,
+                    reminderMinute = current.reminderMinute
+                )
                 BackupManager.write(snapshot, resolver, uri)
             }.onSuccess {
                 _state.update { it.copy(busy = false, message = "Backup exported.") }
-                onDone()
+                onDone?.invoke()
             }.onFailure { error ->
                 _state.update { it.copy(busy = false, message = error.userMessage()) }
             }
@@ -441,7 +460,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     fun restoreBackup(
         resolver: android.content.ContentResolver,
         uri: android.net.Uri,
-        onDone: () -> Unit
+        onResult: ((Boolean, String?) -> Unit)? = null
     ) {
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
@@ -451,13 +470,25 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                 preferences.edit {
                     it[NAME_KEY] = snapshot.name
                     it[THEME_KEY] = snapshot.themeMode
+                    it[TRACKING_MODE_KEY] = snapshot.trackingMode
+                    it[NOTIFICATIONS_ENABLED_KEY] = snapshot.notificationsEnabled
+                    it[DAILY_REMINDER_KEY] = snapshot.dailyReminderEnabled
+                    it[WEEKLY_REVIEW_KEY] = snapshot.weeklyReviewEnabled
+                    it[MONTHLY_REVIEW_KEY] = snapshot.monthlyReviewEnabled
+                    it[PLAN_ENDING_KEY] = snapshot.planEndingEnabled
+                    it[REMINDER_HOUR_KEY] = snapshot.reminderHour
+                    it[REMINDER_MINUTE_KEY] = snapshot.reminderMinute
+                    it[ONBOARDING_KEY] = true
                 }
+                snapshot
             }.onSuccess {
                 refresh()
                 _state.update { it.copy(busy = false, message = "Backup restored.") }
-                onDone()
+                onResult?.invoke(true, null)
             }.onFailure { error ->
-                _state.update { it.copy(busy = false, message = "Restore failed: ${error.userMessage()}") }
+                val userMsg = error.userMessage()
+                _state.update { it.copy(busy = false, message = "Restore failed: $userMsg") }
+                onResult?.invoke(false, userMsg)
             }
         }
     }
@@ -515,29 +546,8 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         repository.planIncome(planId) to repository.planExpenses(planId)
 
     private fun isActiveOrUpcoming(plan: FinancialPlan): Boolean =
-        plan.endMs >= startOfToday() || plan.startMs >= startOfToday()
-
-    private fun startOfToday(): Long = java.util.Calendar.getInstance().apply {
-        set(java.util.Calendar.HOUR_OF_DAY, 0)
-        set(java.util.Calendar.MINUTE, 0)
-        set(java.util.Calendar.SECOND, 0)
-        set(java.util.Calendar.MILLISECOND, 0)
-    }.timeInMillis
+        !plan.endDate.isBefore(LocalDate.now()) || !plan.startDate.isBefore(LocalDate.now())
 
     private fun Throwable.userMessage(): String =
         message?.takeIf { it.isNotBlank() } ?: "Something went wrong. Please try again."
-
-    companion object {
-        private val NAME_KEY = stringPreferencesKey("name")
-        private val THEME_KEY = stringPreferencesKey("theme")
-        private val TRACKING_MODE_KEY = stringPreferencesKey("tracking_mode")
-        private val ONBOARDING_KEY = booleanPreferencesKey("onboarding_completed")
-        private val NOTIFICATIONS_ENABLED_KEY = booleanPreferencesKey("notifications_enabled")
-        private val DAILY_REMINDER_KEY = booleanPreferencesKey("daily_reminder_enabled")
-        private val WEEKLY_REVIEW_KEY = booleanPreferencesKey("weekly_review_enabled")
-        private val MONTHLY_REVIEW_KEY = booleanPreferencesKey("monthly_review_enabled")
-        private val PLAN_ENDING_KEY = booleanPreferencesKey("plan_ending_enabled")
-        private val REMINDER_HOUR_KEY = intPreferencesKey("reminder_hour")
-        private val REMINDER_MINUTE_KEY = intPreferencesKey("reminder_minute")
-    }
 }
