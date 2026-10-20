@@ -19,10 +19,10 @@
 | V1 / 09 — Activity and Insights Refinement | ✅ Completed | ✅ Completed |
 | V1 / 10 — Data Safety and Backup | ✅ Completed | ✅ Completed |
 | V1 / 11 — Settings and App Preferences | ✅ Completed | ✅ Completed |
-| V1 / 12 — UI/UX Polish | ✅ Phase prepared | 🚧 In progress |
-| V1 / 13 — Performance and Reliability | ✅ Phase prepared | ⏳ Hardening pending |
+| V1 / 12 — UI/UX Polish | ✅ Completed | ✅ Completed |
+| V1 / 13 — Performance and Reliability | ✅ Completed | ✅ Completed |
 | V1 / 14 — Testing and Release Readiness | ✅ Phase prepared | ⏳ Validation pending |
-| V1 / 15 — V1 Finalization | ✅ Phase prepared | 🚧 Current work pending |
+| V1 / 15 — V1 Finalization | ✅ Phase prepared | ⏳ Finalization pending |
 | V2 candidate — Saving Goals | ⏳ Proposed / not prepared | ⏳ Not started |
 
 ## 🔀 V1 Phase / Branch Mapping
@@ -44,8 +44,8 @@ The names below are the **canonical Android branch names recorded by the documen
 | V1 / 09 | [v1/phase/09-activity-and-insights-refinement](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/09-activity-and-insights-refinement) |
 | V1 / 10 | [v1/phase/10-data-safety-and-backup](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/10-data-safety-and-backup) |
 | V1 / 11 | [v1/phase/11-settings-and-app-preferences](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/11-settings-and-app-preferences) *(accepted, physically tested baseline)* |
-| V1 / 12 | [v1/phase/12-ui-ux-polish](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/12-ui-ux-polish) *(active development branch, based on the accepted Phase 11 baseline)* |
-| V1 / 13 | [v1/phase/13-performance-and-reliability](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/13-performance-and-reliability) *(created when Phase 13 begins)* |
+| V1 / 12 | [v1/phase/12-ui-ux-polish](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/12-ui-ux-polish) *(developer-accepted historical checkpoint)* |
+| V1 / 13 | [v1/phase/13-performance-and-reliability](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/13-performance-and-reliability) *(developer accepted; changes merged into `main` through PR #26)* |
 | V1 / 14 | [v1/phase/14-testing-and-release-readiness](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/14-testing-and-release-readiness) *(created when Phase 14 begins)* |
 | V1 / 15 | [v1/phase/15-v1-finalization](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/tree/v1/phase/15-v1-finalization) *(created when Phase 15 begins)* |
 | 16 | — |
