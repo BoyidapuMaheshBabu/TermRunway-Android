@@ -17,6 +17,13 @@ Examples:
 
 This folder prevents unresolved thinking from disappearing into conversations while keeping the accepted `decisions/` folder clean.
 
+## Tracked Records
+
+| Record | Status | GitHub tracking |
+|---|---|---|
+| [Issue 001 — Multiple Plans](001-multiple-plans-decision.md) | Open — decision not made | Product question |
+| [Issue 002 — Saving Goals V2 Candidate](002-saving-goals-v2-candidate.md) | Open — proposed V2 candidate; no phase assigned | [GitHub issue #27](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/issues/27) |
+
 ## Status Model
 
 Use these states:
