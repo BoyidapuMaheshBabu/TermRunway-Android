@@ -1,114 +1,127 @@
-# Phase 11: Settings, App Preferences & Date/Time Architecture
+# Phase 11 — Settings, App Preferences, Data Safety & Date/Time Architecture
 
-## Overview
-Phase 11 addresses user experience, data safety, notification reliability, and date/time/timezone architecture improvements in TermRunway Android:
-1. Restore feedback and navigation order.
-2. Calendar-aware monthly reminders.
-3. Complete offline backup and safe restoration.
-4. Robust device date, time, and time-zone architecture.
+## Status
 
----
+**Phase / Branch Status:** ✅ Completed  
+**Feature / Refinement Status:** ✅ Completed — developer accepted after physical-device testing on 2026-10-20
 
-## Issue 1: Correct the Restore Experience
+The developer confirmed that Phase 11 is complete. This document consolidates the original scope and acceptance context with the implementation and verification evidence recorded in the Phase 11 update commit.
 
-### Implementation Details
-- **First Dialog (`Replace Current Data?`):**
-  - Prompt: Warns the user that restoring will replace local data and suggests backing up first.
-  - Backup summary details: Profile name, transaction count, plan count, planned incomes count, planned expenses count, categories count.
-  - Controls: Close (`✕`) control at top-right to dismiss dialog. Two action buttons: `Backup First` and `Continue`.
-  - Behavior: Tapping `Backup First` triggers the system document picker (`CreateDocument`) to export current local data while preserving the pending restore state. Tapping `Continue` navigates to the second confirmation dialog without starting restoration.
-- **Second Dialog (`Confirm Restore`):**
-  - Prompt: Asks for final confirmation (`Your current data will be replaced with the selected backup. Do you want to continue?`).
-  - Controls: Close (`✕`) control at top-right. Actions: `Go Back` (returns to first dialog) and `Restore` (starts restoration).
-- **Progress & Asynchronous Flow:**
-  - Blocking progress overlay showing `Restoring your data…` with a `CircularProgressIndicator`.
-  - Restores database atomically inside an SQLite transaction and updates DataStore preferences asynchronously.
-  - Prevents duplicate restore attempts during execution.
-  - Shows success dialog (`✓ Restore Complete`) only after successful completion and refreshes ViewModel state/navigates smoothly.
-  - On error, shows error dialog (`Invalid Backup File` / failure message) and preserves existing local data.
+## Objective
 
----
+Make Settings a reliable, understandable utility area while preserving the daily tracking and planning workflows. Phase 11 also addresses offline data preservation, reminder reliability, and correct calendar-date/time-zone behavior needed to keep the app trustworthy across devices and system changes.
 
-## Issue 2: Calendar-Aware Monthly Reminders
+This is a refinement and reliability phase, not permission to add unrelated product features or redesign the whole app.
 
-### Implementation Details
-- **Date Calculation (`MonthlyReminderCalculator`):**
-  - Extracted month-end date calculation into `MonthlyReminderCalculator`.
-  - Computes the exact last day of the calendar month for 28, 29, 30, and 31-day months, properly handling leap years (e.g. Feb 29 on leap years, Feb 28 on non-leap years).
-  - Respects the user-selected reminder time (`targetHour` and `targetMinute`).
-  - Automatically rolls over to the last day of the next calendar month if the target time for the current month has passed.
-- **WorkManager Scheduling (`NotificationScheduler`):**
-  - Replaced the 30-day periodic schedule (`PeriodicWorkRequestBuilder`) with a precise `OneTimeWorkRequestBuilder<MonthlyReviewWorker>` targeting the exact last calendar day of each month.
-  - Cancels any existing periodic or one-time monthly review tasks before enqueuing the new schedule (`ExistingWorkPolicy.REPLACE`).
-  - Reschedules automatically after a monthly review fires (`MonthlyReviewWorker.doWork()`) and across device restarts via `BootReceiver` reading saved DataStore preferences.
+## Product Constraints
 
----
+- Keep TermRunway offline-first, with no required backend, account, or internet connection.
+- Keep personal financial data local.
+- Keep Settings separate from the primary navigation: Home | Plan | + | Activity | Insights.
+- Preserve the single connected transaction foundation for Daily Tracking and Plan Tracking.
+- Do not add features merely to make the project appear more sophisticated.
+- Treat financial and calendar correctness as more important than visual decoration.
 
-## Issue 3: Complete Offline Backup & Safe Restoration
+## Intended Scope
 
-### Implementation Details
-- **Complete Data Preservation (`BackupSnapshot`):**
-  - Audited all user-owned data and updated `BackupSnapshot` to store:
-    - Profile name and portable preferences: `themeMode`, `trackingMode`, `notificationsEnabled`, `dailyReminderEnabled`, `weeklyReviewEnabled`, `monthlyReviewEnabled`, `planEndingEnabled`, `reminderHour`, `reminderMinute`.
-    - Transactions and transaction details.
-    - Default and custom categories.
-    - Financial plans (both active and past/completed plans).
-    - Planned income and planned expense entries.
-  - Device-specific OS permissions and local runtime notification state markers (e.g. milestone flags) are kept local and excluded from portable exports.
-- **Validation & Safe Deserialization (`BackupManager`):**
-  - Validates app identifier (`TermRunway`), schema version (`1` and `2`), and non-negative transaction/planned amounts.
-  - Validates parent-child relationships: verifies that all `plannedIncomes` and `plannedExpenses` reference a valid plan present in `plans`.
-  - Provides fallback default values for portable preference fields when reading legacy Version 1 backups, maintaining full backwards compatibility.
-- **Atomic Restoration (`TermRunwayRepository`):**
-  - Executes database replacement inside a single SQLite transaction (`db.beginTransaction()`). If any failure occurs, the transaction rolls back cleanly without leaving partially replaced data.
-  - Remaps regenerated database IDs for plans while preserving parent-child relationships for planned entries.
-  - Re-syncs notifications (`NotificationScheduler.syncFromPreferences`) and refreshes repository/ViewModel caches immediately on success.
+1. Review the Settings information architecture and section hierarchy.
+2. Keep profile and preference controls clear and responsive to stored state.
+3. Support the custom reminder time and ensure it is persisted and used by scheduling.
+4. Keep notification permission, the master notification switch, and individual reminder controls consistent.
+5. Keep System, Light, and Dark theme choices persistent.
+6. Preserve export and restore safety, including validation, confirmation, progress and result feedback.
+7. Keep destructive local-data clearing explicit and confirmed.
+8. Preserve custom-category management and user feedback.
+9. Schedule monthly review reminders against actual calendar-month boundaries, not a fixed 30-day interval.
+10. Keep date-only financial values stable across time-zone changes and migrate previously stored date values safely.
 
----
+## Implementation Evidence Recorded in the Phase 11 Update
 
-## Issue 4: Date, Time & Time-Zone Architecture Corrections
+### 1. Settings and preferences
 
-### Implementation Details
-- **Date Semantics & Type System:**
-  - Calendar dates (transaction date, plan start/end dates, planned item dates) are stored as ISO-8601 strings (`YYYY-MM-DD`) using `java.time.LocalDate`.
-  - Instants (`createdAtMs`) remain epoch milliseconds representing precise real moments in time.
-  - Disentangled time zone changes from calendar dates: `"2026-10-18"` remains October 18, 2026 regardless of device time zone shifts.
-- **Database Schema Migration (v2 → v3):**
-  - Incremented SQLite schema version to 3 in `TermRunwayDatabase.kt`.
-  - Migrated `transactions`, `plans`, `planned_income`, and `planned_expense` tables to ISO-8601 string columns (`date_str`, `start_date_str`, `end_date_str`, `expected_date_str`).
-  - Added `migrateToVersion3()` that reads legacy `_ms` columns and converts them to `YYYY-MM-DD` strings via cursor loop, preserving all record IDs, amounts, categories, and foreign key constraints without data loss.
-- **Date Calculations & Day Math:**
-  - Removed fixed `86_400_000L` day duration constants from `FinancialCalculator` and `UiFormatting`.
-  - Replaced millisecond day math with `ChronoUnit.DAYS.between(start, end) + 1` for inclusive day calculations, correctly supporting leap years, month boundaries, and daylight-saving transitions.
-- **Backup Format Schema Version 2:**
-  - Updated `BackupManager` to export backup format schema version 2 using ISO date strings for calendar dates.
-  - Retained full support for importing legacy schema version 1 backups with `dateMs` / `startMs` / `endMs` epoch millis.
-- **System Event Listeners & Responsive UI:**
-  - Configured `BootReceiver` and `AndroidManifest.xml` to handle `ACTION_BOOT_COMPLETED`, `ACTION_MY_PACKAGE_REPLACED`, `ACTION_TIMEZONE_CHANGED`, and `ACTION_TIME_SET` (`ACTION_TIME_CHANGED`) to reschedule notifications immediately on system clock/timezone changes.
-  - Configured `MainActivity` to register a dynamic `BroadcastReceiver` for time ticks, date changes, and timezone changes, invoking `viewModel.refresh()` on `onResume()` and on system clock ticks across midnight.
+- Profile name, appearance preferences, reminders, custom categories, local-data actions, and About information remain available in Settings.
+- Custom reminder time supports the user's selected hour and minute.
+- Notification controls include the master notification setting and individual reminder settings.
+- Theme selection is stored locally.
 
----
+### 2. Restore flow and user feedback
 
-## Verification Results
+- The initial replacement dialog explains that restoring replaces current local data and summarizes the data to be replaced.
+- The user can choose **Backup First** or continue to a second confirmation dialog.
+- Restoration shows a blocking progress state and prevents duplicate attempts while the operation is in progress.
+- Success feedback is shown after restoration reports success; failure feedback is shown when restoration fails.
+- Database replacement is performed transactionally. A failed database restore should roll back rather than leave partially replaced database records.
+- Repository/ViewModel state and notification schedules are refreshed after successful restoration.
 
-### Automated Unit Tests
-Executed `./gradlew test` with **63 tests passing and 0 failures**:
-- `fullDatasetRoundTripTest` & `schemaVersion2RoundTripTest`: Verified full dataset export and restore for both Schema Version 1 and Schema Version 2.
-- `legacyVersion1MigrationTest`: Verified importing legacy schema version 1 backups into `LocalDate` domain models.
-- `migrationFromVersion2ToVersion3PreservesDataAndConvertsDatesToIsoStrings`: Verified database schema upgrade from v2 to v3, converting legacy epoch millis to `YYYY-MM-DD` strings while preserving all record IDs and amounts.
-- `iso8601StringParsingPreservesCalendarDateIndependentlyOfTimeZone`: Verified time-zone invariance of `LocalDate` strings.
-- `leapYearDaysInclusiveCalculation`: Verified 29 days in Feb 2028 and 366 days in leap year 2028 vs 365 days in 2027.
-- `monthBoundaryInclusiveDaysCalculation`: Verified inclusive day count across Jan 31 -> Feb 1 month boundary.
-- `planMetricsCalculateRemainingMoneyAndDailyGuidance`: Verified remaining runway and safe spending calculations with `LocalDate`.
-- `monthlyReminderTargetFor28DayFebruaryNonLeapYear` & `monthlyReminderTargetFor29DayFebruaryLeapYear`: Verified month-end reminder calculations.
+### 3. Calendar-aware monthly reminders
 
-### Build Verification
-- Executed `./gradlew assembleDebug`: Build finished successfully with 0 errors.
+- Month-end date calculation is extracted into `MonthlyReminderCalculator`.
+- The calculation handles 28-, 29-, 30-, and 31-day months, including leap-year February, and respects the chosen reminder time.
+- Monthly review scheduling uses a one-time work request for the next actual calendar-month end instead of a repeating 30-day interval.
+- The next occurrence is scheduled after a monthly reminder runs.
+- Existing monthly work is replaced when preferences are rescheduled, avoiding stale duplicate schedules.
+- Boot and relevant system time/date/time-zone events trigger reminder rescheduling.
 
----
+WorkManager timing is still subject to Android's execution constraints; a target date/time does not guarantee execution at that exact minute.
 
-## Status Summary
-- Issue 1 (Restore feedback and navigation order): **VERIFIED & COMPLETED**
-- Issue 2 (Calendar-aware monthly reminders): **VERIFIED & COMPLETED**
-- Issue 3 (Complete offline backup and safe restoration): **VERIFIED & COMPLETED**
-- Issue 4 (Date, time and time-zone corrections): **VERIFIED & COMPLETED**
+### 4. Offline backup and safe restoration
+
+The updated backup snapshot covers:
+- Profile name and portable preferences, including theme, tracking mode and reminder settings.
+- Transactions and their details.
+- Default and custom categories.
+- Financial plans, including past/completed plans represented by the persisted plan data.
+- Planned income and planned expense records.
+
+Device-specific OS permissions and runtime notification milestone markers remain local and are not included in portable backups.
+
+The updated backup implementation:
+- Exports schema version 2 using ISO-8601 calendar-date strings.
+- Retains compatibility for supported schema version 1 backups.
+- Validates the app identifier, supported schema version, amounts and planned-income/expense references to existing plans.
+- Restores database records transactionally and remaps plan IDs where needed while preserving child relationships.
+- Re-synchronizes notifications and refreshes the in-memory state after successful restoration.
+
+### 5. Calendar-date and time-zone correctness
+
+- Date-only values such as transaction dates, plan start/end dates and planned-item dates use ISO-8601 strings (`YYYY-MM-DD`) and `java.time.LocalDate`.
+- `createdAtMs` remains epoch milliseconds for an actual instant in time.
+- The SQLite schema was upgraded from version 2 to version 3, migrating persisted date columns from legacy millisecond values to ISO date strings while preserving record IDs and amounts.
+- Day counts use calendar-date arithmetic such as `ChronoUnit.DAYS.between` rather than assuming every local calendar day is exactly 86,400,000 milliseconds.
+- Backup schema version 2 stores ISO date strings while supported schema version 1 backups remain importable.
+- System boot, app replacement, time-setting and time-zone changes trigger notification scheduling refreshes; the app refreshes date-sensitive UI state on resume and relevant clock/date events.
+
+## Verification Evidence
+
+The latest Phase 11 update commit records the following validation results:
+
+- **Automated tests:** `./gradlew test` — 63 tests passed, 0 failures.
+- **Debug build:** `./gradlew assembleDebug` — reported successful.
+- **Coverage specifically mentioned:** schema 1/2 backup round trips, migration from database schema 2 to 3, time-zone-invariant ISO calendar dates, leap-year and month-boundary day calculations, plan metrics, and month-end reminder calculations.
+
+These are the results recorded by the implementation commit; they are not a claim that this reviewer independently reran the commands. The developer separately confirmed physical-device testing and acceptance of Phase 11 on 2026-10-20.
+
+## Acceptance Coverage
+
+The accepted scope covers:
+- Profile and preferences persistence, including theme and reminder time.
+- Clear notification permission and master/sub-toggle behavior.
+- Monthly reminder calendar alignment and scheduling updates.
+- Backup/export, restore validation, confirmation and failure safety.
+- Explicit confirmation before clearing local data.
+- Custom-category feedback and Settings separation from primary navigation.
+- Date/time/time-zone behavior and migration of saved calendar dates.
+- Relevant tests, debug build, and physical-device validation.
+- No regression to tracking, planning, navigation, financial calculations or offline behavior.
+
+## Historical Review Notes
+
+Earlier review notes described potential or observed concerns in restore feedback, monthly reminder scheduling, backup completeness, and date/time handling. The Phase 11 update commit records implementation work and verification evidence addressing these areas. Those earlier notes must not be treated as currently open defects merely because they remain in Git history.
+
+If a new reproducible issue is found later, document it through the project's issue workflow and assign it to the appropriate phase. Do not reopen accepted Phase 11 work without current evidence.
+
+## Completion
+
+**Completed — developer acceptance recorded on 2026-10-20 following physical-device testing.**
+
+Preserve `v1/phase/11-settings-and-app-preferences` as the accepted Phase 11 historical checkpoint once the latest accepted update is merged into `main`.
