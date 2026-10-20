@@ -28,6 +28,8 @@ import com.termrunway.app.data.termRunwayDataStore
 import com.termrunway.app.domain.FinancialCalculator
 import com.termrunway.app.notifications.NotificationScheduler
 import com.termrunway.app.ui.mode.TrackingMode
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -136,30 +138,38 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         refresh()
     }
 
+    private var refreshJob: Job? = null
+
+    private suspend fun loadDataFromRepository() {
+        val tx = repository.listTransactions()
+        val plans = repository.listPlans()
+        val active = plans.firstOrNull { isActiveOrUpcoming(it) } ?: plans.firstOrNull()
+        val incomes = active?.let { repository.planIncome(it.id) }.orEmpty()
+        val expenses = active?.let { repository.planExpenses(it.id) }.orEmpty()
+        val categories = repository.listCategories()
+        _state.update {
+            it.copy(
+                transactions = tx,
+                plans = plans,
+                activePlan = active,
+                plannedIncomes = incomes,
+                plannedExpenses = expenses,
+                categories = categories,
+                loading = false,
+                dataLoaded = true
+            )
+        }
+        syncNotifications()
+    }
+
     fun refresh() {
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             _state.update { it.copy(loading = true) }
             runCatching {
-                val tx = repository.listTransactions()
-                val plans = repository.listPlans()
-                val active = plans.firstOrNull { isActiveOrUpcoming(it) } ?: plans.firstOrNull()
-                val incomes = active?.let { repository.planIncome(it.id) }.orEmpty()
-                val expenses = active?.let { repository.planExpenses(it.id) }.orEmpty()
-                val categories = repository.listCategories()
-                _state.update {
-                    it.copy(
-                        transactions = tx,
-                        plans = plans,
-                        activePlan = active,
-                        plannedIncomes = incomes,
-                        plannedExpenses = expenses,
-                        categories = categories,
-                        loading = false,
-                        dataLoaded = true
-                    )
-                }
-                syncNotifications()
+                loadDataFromRepository()
             }.onFailure { error ->
+                if (error is CancellationException) throw error
                 _state.update {
                     it.copy(
                         loading = false,
@@ -294,15 +304,16 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
-            runCatching { repository.insertTransaction(transaction) }
-                .onSuccess {
-                    refresh()
-                    onDone?.invoke()
-                    _state.update { it.copy(busy = false, message = "Transaction added.") }
-                }
-                .onFailure { error ->
-                    _state.update { it.copy(busy = false, message = error.userMessage()) }
-                }
+            runCatching {
+                repository.insertTransaction(transaction)
+                loadDataFromRepository()
+            }.onSuccess {
+                onDone?.invoke()
+                _state.update { it.copy(busy = false, message = "Transaction added.") }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                _state.update { it.copy(busy = false, message = error.userMessage()) }
+            }
         }
     }
 
@@ -319,30 +330,32 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
-            runCatching { repository.updateTransaction(transaction) }
-                .onSuccess {
-                    refresh()
-                    onDone?.invoke()
-                    _state.update { it.copy(busy = false, message = "Transaction updated.") }
-                }
-                .onFailure { error ->
-                    _state.update { it.copy(busy = false, message = error.userMessage()) }
-                }
+            runCatching {
+                repository.updateTransaction(transaction)
+                loadDataFromRepository()
+            }.onSuccess {
+                onDone?.invoke()
+                _state.update { it.copy(busy = false, message = "Transaction updated.") }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                _state.update { it.copy(busy = false, message = error.userMessage()) }
+            }
         }
     }
 
     fun deleteTransaction(id: Long, onDone: (() -> Unit)? = null) {
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
-            runCatching { repository.deleteTransaction(id) }
-                .onSuccess {
-                    refresh()
-                    onDone?.invoke()
-                    _state.update { it.copy(busy = false, message = "Transaction deleted.") }
-                }
-                .onFailure { error ->
-                    _state.update { it.copy(busy = false, message = error.userMessage()) }
-                }
+            runCatching {
+                repository.deleteTransaction(id)
+                loadDataFromRepository()
+            }.onSuccess {
+                onDone?.invoke()
+                _state.update { it.copy(busy = false, message = "Transaction deleted.") }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                _state.update { it.copy(busy = false, message = error.userMessage()) }
+            }
         }
     }
 
@@ -387,11 +400,12 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                 } else {
                     repository.replacePlan(plan, incomes, expenses)
                 }
+                loadDataFromRepository()
             }.onSuccess {
-                refresh()
                 onDone?.invoke()
                 _state.update { it.copy(busy = false, message = "Plan saved.") }
             }.onFailure { error ->
+                if (error is CancellationException) throw error
                 _state.update { it.copy(busy = false, message = error.userMessage()) }
             }
         }
@@ -400,29 +414,44 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
     fun deletePlan(id: Long, onDone: (() -> Unit)? = null) {
         viewModelScope.launch {
             _state.update { it.copy(busy = true) }
-            runCatching { repository.deletePlan(id) }
-                .onSuccess {
-                    refresh()
-                    onDone?.invoke()
-                    _state.update { it.copy(busy = false, message = "Plan deleted.") }
-                }
-                .onFailure { error -> _state.update { it.copy(busy = false, message = error.userMessage()) } }
+            runCatching {
+                repository.deletePlan(id)
+                loadDataFromRepository()
+            }.onSuccess {
+                onDone?.invoke()
+                _state.update { it.copy(busy = false, message = "Plan deleted.") }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                _state.update { it.copy(busy = false, message = error.userMessage()) }
+            }
         }
     }
 
     fun addCategory(name: String, type: CategoryType) {
         viewModelScope.launch {
-            runCatching { repository.addCategory(name, type) }
-                .onSuccess { refresh(); _state.update { it.copy(message = "Category added.") } }
-                .onFailure { error -> _state.update { it.copy(message = error.userMessage()) } }
+            runCatching {
+                repository.addCategory(name, type)
+                loadDataFromRepository()
+            }.onSuccess {
+                _state.update { it.copy(message = "Category added.") }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                _state.update { it.copy(message = error.userMessage()) }
+            }
         }
     }
 
     fun deleteCategory(id: Long) {
         viewModelScope.launch {
-            runCatching { repository.deleteCustomCategory(id) }
-                .onSuccess { refresh(); _state.update { it.copy(message = "Custom category removed.") } }
-                .onFailure { error -> _state.update { it.copy(message = error.userMessage()) } }
+            runCatching {
+                repository.deleteCustomCategory(id)
+                loadDataFromRepository()
+            }.onSuccess {
+                _state.update { it.copy(message = "Custom category removed.") }
+            }.onFailure { error ->
+                if (error is CancellationException) throw error
+                _state.update { it.copy(message = error.userMessage()) }
+            }
         }
     }
 
@@ -452,6 +481,7 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                 _state.update { it.copy(busy = false, message = "Backup exported.") }
                 onDone?.invoke()
             }.onFailure { error ->
+                if (error is CancellationException) throw error
                 _state.update { it.copy(busy = false, message = error.userMessage()) }
             }
         }
@@ -480,12 +510,13 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                     it[REMINDER_MINUTE_KEY] = snapshot.reminderMinute
                     it[ONBOARDING_KEY] = true
                 }
+                loadDataFromRepository()
                 snapshot
             }.onSuccess {
-                refresh()
                 _state.update { it.copy(busy = false, message = "Backup restored.") }
                 onResult?.invoke(true, null)
             }.onFailure { error ->
+                if (error is CancellationException) throw error
                 val userMsg = error.userMessage()
                 _state.update { it.copy(busy = false, message = "Restore failed: $userMsg") }
                 onResult?.invoke(false, userMsg)
@@ -511,8 +542,8 @@ class TermRunwayViewModel(app: Application) : AndroidViewModel(app) {
                     prefs.remove(REMINDER_HOUR_KEY)
                     prefs.remove(REMINDER_MINUTE_KEY)
                 }
+                loadDataFromRepository()
             }.onSuccess {
-                refresh()
                 _state.update {
                     it.copy(
                         busy = false,
