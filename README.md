@@ -1,6 +1,6 @@
 <p align="center">
   <img
-    src="docs/termrunway-logo.jpeg"
+    src="docs/assets/termrunway-logo.jpeg"
     alt="TermRunway — Plan, Calculate, Achieve"
     width="650"
   />
@@ -14,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/INDEX.md">Product & Engineering Docs</a> ·
+  <a href="docs/README.md">Product & Engineering Docs</a> ·
   <a href="https://github.com/BoyidapuMaheshBabu/TermRunway-Web">Original Web Prototype</a>
 </p>
 
@@ -109,7 +109,7 @@ Validation includes configured **GitHub Actions** checks for debug builds and un
 
 ## 📚 Product & Engineering Documentation
 
-Product context, decisions, phases, roadmap, and AI handoff are maintained in the [documentation index](docs/INDEX.md), alongside the Android implementation.
+Product context, decisions, phases, roadmap, and AI handoff are maintained in the [documentation index](docs/README.md), alongside the Android implementation.
 
 ## 🛠️ Development Approach
 

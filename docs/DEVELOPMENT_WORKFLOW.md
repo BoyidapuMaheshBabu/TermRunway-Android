@@ -1,4 +1,4 @@
-# Development Approach 🧭
+# Development Workflow 🧭
 
 > **Understand → Decide → Build → Validate → Improve**
 >

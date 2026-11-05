@@ -11,9 +11,9 @@
 | [001](001-native-android-direction.md) | Native Android Direction | Defines the current product platform |
 | [002](002-offline-first.md) | Offline First | Protects privacy, reliability and local ownership |
 | [003](003-two-mode-product-model.md) | Two-Mode Product Model | Connects actual tracking with future planning |
-| [004](004-product-knowledge-repository.md) | Separate Product Knowledge Repository | Preserves product context independently of implementation |
+| [004](004-product-knowledge-repository.md) | Separate Product Knowledge Repository (Superseded) | Preserves the history of the earlier repository boundary |
 | [005](005-analysis-first-ai-handoff.md) | Analysis-First AI Development Handoff | Gives new AI sessions durable context before implementation |
-| [006](006-saving-goals.md) | Saving Goals | Adds explicit future-saving intent without creating a third product mode |
+| [006](006-saving-goals.md) | Saving Goals (V2 selection pending) | Records the product concept and boundaries without authorizing implementation |
 | [007](007-incremental-architecture-evolution.md) | Incremental Architecture Evolution | Keeps architecture adaptable without speculative rewrites |
 
 ## 🗃️ Decision Categories

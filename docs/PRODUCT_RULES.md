@@ -105,8 +105,8 @@ A phase is not officially complete because implementation, builds, tests, or rev
 
 AI must treat an explicit statement such as:
 
-- "Phase 16 is completed"
-- "I accept Phase 16"
+- "V1 Phase 15 is completed"
+- "I accept V1 Phase 15"
 - "This phase is complete"
 
 as the authoritative completion signal.

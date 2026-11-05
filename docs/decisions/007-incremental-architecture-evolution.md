@@ -80,5 +80,5 @@ It also keeps architecture adaptable: refactoring remains encouraged when it mak
 
 ## Related
 
-- Development Approach: [Understand → Decide → Build → Validate → Improve](../DEVELOPMENT_APPROACH.md)
+- Development Approach: [Understand → Decide → Build → Validate → Improve](../DEVELOPMENT_WORKFLOW.md)
 - Product Rules: [Product Rules](../PRODUCT_RULES.md)

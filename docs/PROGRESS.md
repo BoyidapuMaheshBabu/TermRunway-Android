@@ -1,6 +1,6 @@
-# TermRunway Current State
+# TermRunway Project Progress
 
-> This document answers: **Where is TermRunway right now?**
+> This document records **what is accepted, what is current, and what comes next**.
 
 ## Current Product
 

@@ -34,7 +34,7 @@ A goal tracks a target and explicit local contributions. Contributions are separ
 
 ## Decision
 
-TermRunway will support **Saving Goals** as a focused planning layer.
+TermRunway's accepted product direction is to consider **Saving Goals** as a focused planning layer in V2. This decision records the intended concept and guardrails; it does not authorize implementation in V1 or assign a V2 phase number.
 
 A goal may contain:
 
@@ -89,9 +89,9 @@ The first implementation should not include:
 
 ## Status
 
-**Accepted — planned as the next focused product feature after V1.0 stabilization.**
+**Accepted product direction — V2 inclusion, implementation scope, and phase assignment remain pending.**
 
 ## Related
 
-- Phase: [Phase 16 — Saving Goals](../phases/16-saving-goals.md)
+- V2 candidate: [Issue 002 — Saving Goals](../issues/002-saving-goals-v2-candidate.md)
 - Product Rules: [Product Rules](../PRODUCT_RULES.md)

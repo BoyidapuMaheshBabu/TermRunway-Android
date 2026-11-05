@@ -65,7 +65,7 @@ The sequence is:
 
 ## Current Scope
 
-The current priority is **V1 finalization**, not uncontrolled feature expansion.
+The current priority is **V1 Phase 14 — Testing and Release Readiness, followed by V1 Phase 15 — V1 Finalization**, not uncontrolled feature expansion.
 
 The goal is a product that is:
 
