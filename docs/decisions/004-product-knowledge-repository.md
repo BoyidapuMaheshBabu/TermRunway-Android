@@ -50,9 +50,9 @@ This separation allows different AI tools and accounts to understand the product
 
 ## Status
 
-**Accepted**
+**Superseded**
 
 ## Related
 
-- [Index](../INDEX.md)
+- [Index](../README.md)
 - [Product Context](../PRODUCT_CONTEXT.md)

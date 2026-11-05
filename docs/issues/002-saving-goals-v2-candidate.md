@@ -5,10 +5,10 @@
 **Open — Proposed V2 candidate. No phase number assigned.**
 
 - GitHub tracking issue: [#27 — Saving Goals](https://github.com/BoyidapuMaheshBabu/TermRunway-Android/issues/27)
-- Decision status: proposed, not accepted for implementation
+- Product direction: recorded in [Decision 006](../decisions/006-saving-goals.md); V2 inclusion and phase assignment remain pending
 - Version boundary: V2 candidate only; **not V1 Phase 16**
 
-This record preserves the proposal for future V2 planning. It is not an accepted product decision or implementation-ready phase. V1 ends at Phase 15. If selected, Saving Goals will receive a phase number in the V2 sequence beginning at V2 Phase 01.
+This record preserves the V2 proposal and its unresolved implementation scope. Decision 006 records the accepted product concept and guardrails; it does not authorize implementation or assign a V2 phase. V1 ends at Phase 15. If selected during V2 planning, Saving Goals will receive a phase number in the V2 sequence beginning at V2 Phase 01.
 
 ## Product Objective
 

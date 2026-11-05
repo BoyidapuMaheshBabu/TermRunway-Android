@@ -14,16 +14,16 @@ The goal is not to preserve conversation history. The goal is to preserve the **
 
 ## 📚 1. Read the project documentation first
 
-Before implementation, read the relevant documents in this repository.
+Follow the repository-level instructions in [AGENTS.md](../AGENTS.md), then read the relevant documents in this repository.
 
 Recommended order:
 
 1. [PRODUCT_CONTEXT.md](PRODUCT_CONTEXT.md) — product identity, problem, users, scope, principles
-2. [CURRENT_STATE.md](CURRENT_STATE.md) — current implementation/product status
+2. [PROGRESS.md](PROGRESS.md) — current implementation/product status
 3. [PRODUCT_RULES.md](PRODUCT_RULES.md) — non-negotiable rules
 4. [ROADMAP.md](ROADMAP.md) — current direction and future scope
-5. [DEVELOPMENT_APPROACH.md](DEVELOPMENT_APPROACH.md) — engineering workflow
-6. [INDEX.md](INDEX.md) — repository navigation
+5. [DEVELOPMENT_WORKFLOW.md](DEVELOPMENT_WORKFLOW.md) — engineering workflow
+6. [README.md](README.md) — repository navigation
 7. Relevant [decisions](decisions/README.md)
 8. Relevant [phase](phases/README.md) documentation
 9. Review the relevant product context, decisions, and phase documentation before making a new product decision
@@ -247,7 +247,7 @@ After explicit confirmation:
 
 1. update the phase document status
 2. update the phase index/status where applicable
-3. update [CURRENT_STATE.md](CURRENT_STATE.md), [INDEX.md](INDEX.md), or [ROADMAP.md](ROADMAP.md) only when the confirmed completion materially changes those documents
+3. update [PROGRESS.md](PROGRESS.md), [README.md](README.md), or [ROADMAP.md](ROADMAP.md) only when the confirmed completion materially changes those documents
 4. update related decision status only when the decision was actually implemented and the phase completion provides the evidence
 5. preserve the completion history rather than deleting the phase or its decisions
 

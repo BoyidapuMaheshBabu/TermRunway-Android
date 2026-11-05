@@ -75,6 +75,6 @@ The model is:
 ## Related
 
 - Product knowledge repository: [Decision 004](004-product-knowledge-repository.md)
-- Development workflow: [DEVELOPMENT_APPROACH.md](../DEVELOPMENT_APPROACH.md)
+- Development workflow: [DEVELOPMENT_WORKFLOW.md](../DEVELOPMENT_WORKFLOW.md)
 - AI handoff: [AI_HANDOFF.md](../AI_HANDOFF.md)
-- Current product state: [CURRENT_STATE.md](../CURRENT_STATE.md)
+- Current product state: [PROGRESS.md](../PROGRESS.md)
