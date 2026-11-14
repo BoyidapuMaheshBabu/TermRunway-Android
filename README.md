@@ -165,6 +165,8 @@ Rather than hide or erase that earlier work, the repository preserves the origin
 **Boyidapu Mahesh Babu**  
 Diploma in Computer Science Engineering student
 
+[GitHub Profile](https://github.com/BoyidapuMaheshBabu)
+
 ---
 
 > **Understand first. Build deliberately. Test the real product. Improve continuously. 🚀**
